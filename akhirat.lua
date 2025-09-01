@@ -1,5 +1,5 @@
--- Delta Summit Auto Script - Map Akhirat
--- Dibuat untuk auto summit dengan UI keren
+-- YARS Summit Auto Script - Map Akhirat
+-- Auto Summit Gunung Atin - Enhanced Version
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -19,13 +19,14 @@ local BASECAMP_POS = CFrame.new(-243.999069, 120.998016, 202.997528, 1, 7.900260
 local autoSummitEnabled = false
 local summitCount = 0
 local lastSummitCheck = 0
+local isMinimized = false
+local currentTab = "teleport"
 
 -- Fungsi Server Hopping ke server sepi
 local function hopToEmptyServer()
     local gameId = game.PlaceId
     local servers = {}
     
-    -- Ambil data server
     pcall(function()
         local success, result = pcall(function()
             return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. gameId .. "/servers/Public?sortOrder=Asc&limit=100"))
@@ -38,14 +39,12 @@ local function hopToEmptyServer()
                 end
             end
             
-            -- Sort berdasarkan jumlah player (dari yang paling sedikit)
             table.sort(servers, function(a, b)
                 return a.playing < b.playing
             end)
         end
     end)
     
-    -- Teleport ke server terbaik atau random server jika tidak ada yang sepi
     if #servers > 0 then
         showNotification("🌐 Hopping ke server dengan " .. servers[1].playing .. " player...", Color3.fromRGB(100, 200, 255))
         TeleportService:TeleportToPlaceInstance(gameId, servers[1].id, player)
@@ -55,33 +54,28 @@ local function hopToEmptyServer()
     end
 end
 
--- Fungsi Notifikasi
+-- Fungsi Notifikasi (YARS Style)
 local function showNotification(text, color)
     local notification = Instance.new("ScreenGui")
-    notification.Name = "SummitNotification"
+    notification.Name = "YARSNotification"
     notification.Parent = CoreGui
     notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 300, 0, 60)
-    frame.Position = UDim2.new(1, -320, 0, 20)
-    frame.BackgroundColor3 = color or Color3.fromRGB(50, 50, 50)
+    frame.Size = UDim2.new(0, 350, 0, 70)
+    frame.Position = UDim2.new(1, -370, 0, 20)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     frame.BorderSizePixel = 0
     frame.Parent = notification
     
-    -- Rounded corners
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = frame
     
-    -- Gradient
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))
-    }
-    gradient.Rotation = 45
-    gradient.Parent = frame
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Color3.fromRGB(70, 70, 80)
+    stroke.Thickness = 1
+    stroke.Parent = frame
     
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(1, -20, 1, 0)
@@ -90,63 +84,59 @@ local function showNotification(text, color)
     textLabel.Text = text
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     textLabel.TextScaled = true
-    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Font = Enum.Font.Gotham
     textLabel.Parent = frame
     
-    -- Animation masuk
-    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(1, -320, 0, 20)})
+    -- Animation
+    frame.Position = UDim2.new(1, 20, 0, 20)
+    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(1, -370, 0, 20)})
     tweenIn:Play()
     
-    -- Auto hilang setelah 3 detik
-    wait(3)
-    local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 20, 0, 20)})
-    tweenOut:Play()
-    tweenOut.Completed:Connect(function()
-        notification:Destroy()
+    spawn(function()
+        wait(3)
+        local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 20, 0, 20)})
+        tweenOut:Play()
+        tweenOut.Completed:Connect(function()
+            notification:Destroy()
+        end)
     end)
 end
 
--- Fungsi Teleport
+-- Fungsi Teleport (Instant)
 local function teleportTo(position, locationName)
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
         character.HumanoidRootPart.CFrame = position
-        showNotification("✅ Teleport ke " .. locationName .. " berhasil!", Color3.fromRGB(100, 255, 100))
+        showNotification("✅ Teleport ke " .. locationName, Color3.fromRGB(100, 255, 100))
         return true
     else
-        showNotification("❌ Gagal teleport - Character tidak ditemukan!", Color3.fromRGB(255, 100, 100))
+        showNotification("❌ Gagal teleport - Character tidak ditemukan", Color3.fromRGB(255, 100, 100))
         return false
     end
 end
 
--- Fungsi cari dan klik tombol "ke basecamp"
-local function clickBasecampButton()
-    local success = false
-    
-    -- Cari di semua GUI yang mungkin
-    for _, gui in pairs(playerGui:GetChildren()) do
-        for _, descendant in pairs(gui:GetDescendants()) do
-            if descendant:IsA("TextButton") or descendant:IsA("GuiButton") then
-                local text = descendant.Text:lower()
-                if text:find("basecamp") or text:find("base camp") or text:find("ke basecamp") then
-                    descendant.MouseButton1Click:Fire()
-                    success = true
-                    break
-                end
+-- Fungsi force reset player (lebih agresif)
+local function forceReset()
+    local character = player.Character
+    if character and character:FindFirstChild("Humanoid") then
+        -- Method 1: Reset via Humanoid
+        character.Humanoid.Health = 0
+        
+        -- Method 2: Destroy character parts (backup)
+        spawn(function()
+            wait(0.1)
+            if character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart:Destroy()
             end
-        end
-        if success then break end
+        end)
+        
+        showNotification("💀 Force reset ke basecamp", Color3.fromRGB(255, 200, 100))
+        return true
     end
-    
-    -- Jika tidak menemukan tombol, teleport manual
-    if not success then
-        teleportTo(BASECAMP_POS, "Basecamp (Manual)")
-    else
-        showNotification("🏠 Kembali ke basecamp via tombol", Color3.fromRGB(255, 255, 100))
-    end
+    return false
 end
 
--- Fungsi deteksi summit (berdasarkan posisi dan leaderstats)
+-- Fungsi deteksi summit (lebih sensitif)
 local function checkSummitReached()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
@@ -155,215 +145,151 @@ local function checkSummitReached()
     local summitPos = SUMMIT_POS.Position
     local distance = (currentPos - summitPos).Magnitude
     
-    -- Jika dalam radius 20 studs dari puncak
-    if distance <= 20 and currentPos.Y > 7800 then
+    -- Deteksi berdasarkan jarak dan ketinggian
+    if distance <= 25 and currentPos.Y > 7800 then
         local currentTime = tick()
         
-        -- Cek leaderstats untuk konfirmasi (jika ada)
+        -- Cek leaderstats dulu
         local leaderstats = player:FindFirstChild("leaderstats")
         if leaderstats then
             local summitStat = leaderstats:FindFirstChild("Summit") or leaderstats:FindFirstChild("Summits") or leaderstats:FindFirstChild("summit")
-            if summitStat and summitStat.Value > lastSummitCheck and currentTime - lastSummitCheck > 3 then
+            if summitStat and summitStat.Value > lastSummitCheck then
                 lastSummitCheck = summitStat.Value
                 summitCount = summitStat.Value
                 showNotification("🏔️ SUMMIT BERHASIL! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
                 return true
             end
-        else
-            -- Jika tidak ada leaderstats, hitung manual berdasarkan waktu
-            if currentTime - lastSummitCheck > 5 then
-                lastSummitCheck = currentTime
-                summitCount = summitCount + 1
-                showNotification("🏔️ SUMMIT BERHASIL! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
-                return true
-            end
+        end
+        
+        -- Deteksi manual berdasarkan waktu
+        if currentTime - lastSummitCheck > 2 then
+            lastSummitCheck = currentTime
+            summitCount = summitCount + 1
+            showNotification("🏔️ SUMMIT BERHASIL! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
+            return true
         end
     end
     return false
 end
 
--- Fungsi Auto Summit Loop
+-- Fungsi Auto Summit (Enhanced)
 local function autoSummitLoop()
     spawn(function()
         while autoSummitEnabled do
-            wait(1)
-            
             -- Step 1: Teleport ke puncak
-            if teleportTo(SUMMIT_POS, "Puncak") then
-                wait(2) -- Tunggu teleport selesai
+            if teleportTo(SUMMIT_POS, "Puncak Gunung") then
                 
-                -- Step 2: Tunggu sampai summit terhitung (max 10 detik)
+                -- Step 2: Tunggu summit terdeteksi (maksimal 5 detik)
                 local startTime = tick()
                 local summitDetected = false
                 
-                while tick() - startTime < 10 and autoSummitEnabled do
+                while tick() - startTime < 5 and autoSummitEnabled do
                     if checkSummitReached() then
                         summitDetected = true
                         break
                     end
-                    wait(0.5)
+                    wait(0.2) -- Check setiap 0.2 detik
                 end
                 
-                if not summitDetected and autoSummitEnabled then
-                    showNotification("⚠️ Summit tidak terdeteksi, coba lagi...", Color3.fromRGB(255, 200, 100))
+                -- Step 3: Langsung reset setelah summit terdeteksi
+                if summitDetected and autoSummitEnabled then
+                    wait(0.5) -- Tunggu sebentar biar summit benar-benar terhitung
+                    forceReset()
+                    
+                    -- Tunggu respawn
+                    local respawnStart = tick()
+                    while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and tick() - respawnStart < 10 do
+                        wait(0.1)
+                    end
+                    
+                    wait(0.5) -- Tunggu character fully loaded
                 end
                 
-                -- Step 3: Kembali ke basecamp
-                if autoSummitEnabled then
-                    wait(1)
-                    clickBasecampButton()
-                    wait(3) -- Tunggu respawn/teleport
-                end
             else
-                wait(2) -- Tunggu sebelum retry jika teleport gagal
+                wait(1) -- Tunggu sebelum retry jika teleport gagal
             end
             
-            wait(2) -- Cooldown antar loop
+            wait(1) -- Cooldown singkat antar loop
         end
     end)
 end
 
--- Buat UI
+-- Switch Tab Function
+local function switchTab(tabName, tabButtons, contentFrames)
+    currentTab = tabName
+    
+    -- Reset all tabs
+    for name, button in pairs(tabButtons) do
+        if name == tabName then
+            button.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+            button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+    end
+    
+    -- Show/hide content frames
+    for name, frame in pairs(contentFrames) do
+        frame.Visible = (name == tabName)
+    end
+end
+
+-- Buat UI YARS Style
 local function createUI()
-    -- Hapus UI lama jika ada
-    if playerGui:FindFirstChild("SummitAutoGUI") then
-        playerGui.SummitAutoGUI:Destroy()
+    -- Hapus UI lama
+    if playerGui:FindFirstChild("YARSSummitGUI") then
+        playerGui.YARSSummitGUI:Destroy()
     end
     
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "SummitAutoGUI"
+    screenGui.Name = "YARSSummitGUI"
     screenGui.Parent = playerGui
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Main Frame
+    -- Main Frame (YARS Style)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 220, 0, 280)
-    mainFrame.Position = UDim2.new(0, 20, 0.5, -140)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    mainFrame.Size = UDim2.new(0, 400, 0, 350)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -175)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
     
-    -- Rounded corners
     local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 15)
+    mainCorner.CornerRadius = UDim.new(0, 8)
     mainCorner.Parent = mainFrame
     
-    -- Gradient background
-    local bgGradient = Instance.new("UIGradient")
-    bgGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 45)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 30))
-    }
-    bgGradient.Rotation = 135
-    bgGradient.Parent = mainFrame
+    local mainStroke = Instance.new("UIStroke")
+    mainStroke.Color = Color3.fromRGB(60, 60, 70)
+    mainStroke.Thickness = 1
+    mainStroke.Parent = mainFrame
     
-    -- Glow effect
-    local glow = Instance.new("ImageLabel")
-    glow.Name = "Glow"
-    glow.Size = UDim2.new(1, 20, 1, 20)
-    glow.Position = UDim2.new(0, -10, 0, -10)
-    glow.BackgroundTransparency = 1
-    glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    glow.ImageColor3 = Color3.fromRGB(100, 150, 255)
-    glow.ImageTransparency = 0.8
-    glow.Parent = mainFrame
+    -- Header dengan close dan minimize
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.Position = UDim2.new(0, 0, 0, 0)
+    header.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    header.BorderSizePixel = 0
+    header.Parent = mainFrame
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 8)
+    headerCorner.Parent = header
     
     -- Title
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, -20, 0, 40)
-    title.Position = UDim2.new(0, 10, 0, 10)
+    title.Size = UDim2.new(1, -100, 1, 0)
+    title.Position = UDim2.new(0, 15, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "🏔️ SUMMIT AUTO"
+    title.Text = "YARS - FREE VERSION Auto Summit (Gunung Atin)"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextScaled = true
-    title.Font = Enum.Font.GothamBold
-    title.Parent = mainFrame
-    
-    -- Summit Counter
-    local counterLabel = Instance.new("TextLabel")
-    counterLabel.Name = "CounterLabel"
-    counterLabel.Size = UDim2.new(1, -20, 0, 30)
-    counterLabel.Position = UDim2.new(0, 10, 0, 55)
-    counterLabel.BackgroundTransparency = 1
-    counterLabel.Text = "Summit: " .. summitCount
-    counterLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    counterLabel.TextScaled = true
-    counterLabel.Font = Enum.Font.Gotham
-    counterLabel.Parent = mainFrame
-    
-    -- Update counter setiap detik
-    spawn(function()
-        while counterLabel and counterLabel.Parent do
-            counterLabel.Text = "Summit: " .. summitCount
-            wait(1)
-        end
-    end)
-    
-    -- Tombol Puncak
-    local summitBtn = Instance.new("TextButton")
-    summitBtn.Name = "SummitButton"
-    summitBtn.Size = UDim2.new(1, -20, 0, 40)
-    summitBtn.Position = UDim2.new(0, 10, 0, 95)
-    summitBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-    summitBtn.Text = "🚀 TELEPORT PUNCAK"
-    summitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    summitBtn.TextScaled = true
-    summitBtn.Font = Enum.Font.GothamBold
-    summitBtn.Parent = mainFrame
-    
-    local summitCorner = Instance.new("UICorner")
-    summitCorner.CornerRadius = UDim.new(0, 10)
-    summitCorner.Parent = summitBtn
-    
-    -- Tombol Auto Summit
-    local autoBtn = Instance.new("TextButton")
-    autoBtn.Name = "AutoButton"
-    autoBtn.Size = UDim2.new(1, -20, 0, 40)
-    autoBtn.Position = UDim2.new(0, 10, 0, 145)
-    autoBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-    autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
-    autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    autoBtn.TextScaled = true
-    autoBtn.Font = Enum.Font.GothamBold
-    autoBtn.Parent = mainFrame
-    
-    local autoCorner = Instance.new("UICorner")
-    autoCorner.CornerRadius = UDim.new(0, 10)
-    autoCorner.Parent = autoBtn
-    
-    -- Tombol Hop Server
-    local hopBtn = Instance.new("TextButton")
-    hopBtn.Name = "HopButton"
-    hopBtn.Size = UDim2.new(1, -20, 0, 40)
-    hopBtn.Position = UDim2.new(0, 10, 0, 195)
-    hopBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
-    hopBtn.Text = "🌐 HOP SERVER SEPI"
-    hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    hopBtn.TextScaled = true
-    hopBtn.Font = Enum.Font.GothamBold
-    hopBtn.Parent = mainFrame
-    
-    local hopCorner = Instance.new("UICorner")
-    hopCorner.CornerRadius = UDim.new(0, 10)
-    hopCorner.Parent = hopBtn
-    
-    -- Minimize Button
-    local minimizeBtn = Instance.new("TextButton")
-    minimizeBtn.Name = "MinimizeButton"
-    minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-    minimizeBtn.Position = UDim2.new(1, -70, 0, 5)
-    minimizeBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
-    minimizeBtn.Text = "−"
-    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    minimizeBtn.TextScaled = true
-    minimizeBtn.Font = Enum.Font.GothamBold
-    minimizeBtn.Parent = mainFrame
-    
-    local minimizeCorner = Instance.new("UICorner")
-    minimizeCorner.CornerRadius = UDim.new(0, 15)
-    minimizeCorner.Parent = minimizeBtn
+    title.TextSize = 14
+    title.Font = Enum.Font.Gotham
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = header
     
     -- Close Button
     local closeBtn = Instance.new("TextButton")
@@ -373,34 +299,234 @@ local function createUI()
     closeBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
     closeBtn.Text = "✕"
     closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextScaled = true
+    closeBtn.TextSize = 16
     closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Parent = mainFrame
+    closeBtn.Parent = header
     
     local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 15)
+    closeCorner.CornerRadius = UDim.new(0, 4)
     closeCorner.Parent = closeBtn
     
-    -- Minimized State
-    local isMinimized = false
-    local originalSize = mainFrame.Size
-    local minimizedSize = UDim2.new(0, 220, 0, 50)
+    -- Minimize Button
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Name = "MinimizeButton"
+    minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+    minimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    minimizeBtn.Text = "−"
+    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeBtn.TextSize = 16
+    minimizeBtn.Font = Enum.Font.GothamBold
+    minimizeBtn.Parent = header
+    
+    local minimizeCorner = Instance.new("UICorner")
+    minimizeCorner.CornerRadius = UDim.new(0, 4)
+    minimizeCorner.Parent = minimizeBtn
+    
+    -- Tab Container
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Size = UDim2.new(1, -20, 0, 50)
+    tabContainer.Position = UDim2.new(0, 10, 0, 50)
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Parent = mainFrame
+    
+    -- Tab Buttons
+    local keyTab = Instance.new("TextButton")
+    keyTab.Name = "KeyTab"
+    keyTab.Size = UDim2.new(0, 120, 1, 0)
+    keyTab.Position = UDim2.new(0, 0, 0, 0)
+    keyTab.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    keyTab.Text = "🔒 Key System"
+    keyTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    keyTab.TextSize = 12
+    keyTab.Font = Enum.Font.Gotham
+    keyTab.Parent = tabContainer
+    
+    local keyCorner = Instance.new("UICorner")
+    keyCorner.CornerRadius = UDim.new(0, 6)
+    keyCorner.Parent = keyTab
+    
+    local teleportTab = Instance.new("TextButton")
+    teleportTab.Name = "TeleportTab"
+    teleportTab.Size = UDim2.new(0, 120, 1, 0)
+    teleportTab.Position = UDim2.new(0, 130, 0, 0)
+    teleportTab.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    teleportTab.Text = "💀 Teleport"
+    teleportTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    teleportTab.TextSize = 12
+    teleportTab.Font = Enum.Font.Gotham
+    teleportTab.Parent = tabContainer
+    
+    local teleportCorner = Instance.new("UICorner")
+    teleportCorner.CornerRadius = UDim.new(0, 6)
+    teleportCorner.Parent = teleportTab
+    
+    local hacksTab = Instance.new("TextButton")
+    hacksTab.Name = "HacksTab"
+    hacksTab.Size = UDim2.new(0, 120, 1, 0)
+    hacksTab.Position = UDim2.new(0, 260, 0, 0)
+    hacksTab.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    hacksTab.Text = "⚙️ Player Hacks"
+    hacksTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    hacksTab.TextSize = 12
+    hacksTab.Font = Enum.Font.Gotham
+    hacksTab.Parent = tabContainer
+    
+    local hacksCorner = Instance.new("UICorner")
+    hacksCorner.CornerRadius = UDim.new(0, 6)
+    hacksCorner.Parent = hacksTab
+    
+    -- Content Frames
+    local keyContent = Instance.new("Frame")
+    keyContent.Name = "KeyContent"
+    keyContent.Size = UDim2.new(1, -20, 1, -120)
+    keyContent.Position = UDim2.new(0, 10, 0, 110)
+    keyContent.BackgroundTransparency = 1
+    keyContent.Visible = false
+    keyContent.Parent = mainFrame
+    
+    local keyLabel = Instance.new("TextLabel")
+    keyLabel.Size = UDim2.new(1, 0, 1, 0)
+    keyLabel.BackgroundTransparency = 1
+    keyLabel.Text = "🔒 Key System Not Required\n\nYARS is completely FREE!"
+    keyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    keyLabel.TextSize = 16
+    keyLabel.Font = Enum.Font.Gotham
+    keyLabel.Parent = keyContent
+    
+    local teleportContent = Instance.new("Frame")
+    teleportContent.Name = "TeleportContent"
+    teleportContent.Size = UDim2.new(1, -20, 1, -120)
+    teleportContent.Position = UDim2.new(0, 10, 0, 110)
+    teleportContent.BackgroundTransparency = 1
+    teleportContent.Visible = true
+    teleportContent.Parent = mainFrame
+    
+    local hacksContent = Instance.new("Frame")
+    hacksContent.Name = "HacksContent"
+    hacksContent.Size = UDim2.new(1, -20, 1, -120)
+    hacksContent.Position = UDim2.new(0, 10, 0, 110)
+    hacksContent.BackgroundTransparency = 1
+    hacksContent.Visible = false
+    hacksContent.Parent = mainFrame
+    
+    local hacksLabel = Instance.new("TextLabel")
+    hacksLabel.Size = UDim2.new(1, 0, 1, 0)
+    hacksLabel.BackgroundTransparency = 1
+    hacksLabel.Text = "⚙️ Player Hacks\n\nComing Soon..."
+    hacksLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    hacksLabel.TextSize = 16
+    hacksLabel.Font = Enum.Font.Gotham
+    hacksLabel.Parent = hacksContent
+    
+    -- TELEPORT CONTENT (Main Features)
+    -- Summit Counter
+    local summitCounter = Instance.new("TextLabel")
+    summitCounter.Name = "SummitCounter"
+    summitCounter.Size = UDim2.new(1, 0, 0, 40)
+    summitCounter.Position = UDim2.new(0, 0, 0, 10)
+    summitCounter.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    summitCounter.Text = "🏔️ Summit Count: " .. summitCount
+    summitCounter.TextColor3 = Color3.fromRGB(255, 215, 0)
+    summitCounter.TextSize = 16
+    summitCounter.Font = Enum.Font.GothamBold
+    summitCounter.Parent = teleportContent
+    
+    local counterCorner = Instance.new("UICorner")
+    counterCorner.CornerRadius = UDim.new(0, 6)
+    counterCorner.Parent = summitCounter
+    
+    -- Teleport ke Puncak Button
+    local summitTeleportBtn = Instance.new("TextButton")
+    summitTeleportBtn.Name = "SummitTeleportButton"
+    summitTeleportBtn.Size = UDim2.new(1, 0, 0, 45)
+    summitTeleportBtn.Position = UDim2.new(0, 0, 0, 60)
+    summitTeleportBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+    summitTeleportBtn.Text = "🚀 TELEPORT KE PUNCAK"
+    summitTeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    summitTeleportBtn.TextSize = 14
+    summitTeleportBtn.Font = Enum.Font.GothamBold
+    summitTeleportBtn.Parent = teleportContent
+    
+    local summitTeleportCorner = Instance.new("UICorner")
+    summitTeleportCorner.CornerRadius = UDim.new(0, 6)
+    summitTeleportCorner.Parent = summitTeleportBtn
+    
+    -- Auto Summit Button (Main Feature)
+    local autoSummitBtn = Instance.new("TextButton")
+    autoSummitBtn.Name = "AutoSummitButton"
+    autoSummitBtn.Size = UDim2.new(1, 0, 0, 45)
+    autoSummitBtn.Position = UDim2.new(0, 0, 0, 115)
+    autoSummitBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+    autoSummitBtn.Text = "⚡ AUTO SUMMIT: OFF"
+    autoSummitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    autoSummitBtn.TextSize = 14
+    autoSummitBtn.Font = Enum.Font.GothamBold
+    autoSummitBtn.Parent = teleportContent
+    
+    local autoCorner = Instance.new("UICorner")
+    autoCorner.CornerRadius = UDim.new(0, 6)
+    autoCorner.Parent = autoSummitBtn
+    
+    -- Server Hop Button
+    local hopBtn = Instance.new("TextButton")
+    hopBtn.Name = "HopButton"
+    hopBtn.Size = UDim2.new(1, 0, 0, 40)
+    hopBtn.Position = UDim2.new(0, 0, 0, 170)
+    hopBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    hopBtn.Text = "🌐 HOP SERVER SEPI"
+    hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hopBtn.TextSize = 14
+    hopBtn.Font = Enum.Font.GothamBold
+    hopBtn.Parent = teleportContent
+    
+    local hopCorner = Instance.new("UICorner")
+    hopCorner.CornerRadius = UDim.new(0, 6)
+    hopCorner.Parent = hopBtn
+    
+    -- Tab system
+    local tabButtons = {
+        key = keyTab,
+        teleport = teleportTab,
+        hacks = hacksTab
+    }
+    
+    local contentFrames = {
+        key = keyContent,
+        teleport = teleportContent,
+        hacks = hacksContent
+    }
     
     -- Event Handlers
-    summitBtn.MouseButton1Click:Connect(function()
-        teleportTo(SUMMIT_POS, "Puncak")
+    keyTab.MouseButton1Click:Connect(function()
+        switchTab("key", tabButtons, contentFrames)
     end)
     
-    autoBtn.MouseButton1Click:Connect(function()
+    teleportTab.MouseButton1Click:Connect(function()
+        switchTab("teleport", tabButtons, contentFrames)
+    end)
+    
+    hacksTab.MouseButton1Click:Connect(function()
+        switchTab("hacks", tabButtons, contentFrames)
+    end)
+    
+    summitTeleportBtn.MouseButton1Click:Connect(function()
+        teleportTo(SUMMIT_POS, "Puncak Gunung")
+    end)
+    
+    autoSummitBtn.MouseButton1Click:Connect(function()
         autoSummitEnabled = not autoSummitEnabled
         if autoSummitEnabled then
-            autoBtn.Text = "⚡ AUTO SUMMIT: ON"
-            autoBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-            showNotification("🔥 Auto Summit AKTIF!", Color3.fromRGB(255, 100, 100))
+            autoSummitBtn.Text = "⚡ AUTO SUMMIT: ON"
+            autoSummitBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+            autoSummitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            showNotification("🔥 Auto Summit AKTIF - Speed Mode!", Color3.fromRGB(255, 100, 100))
             autoSummitLoop()
         else
-            autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
-            autoBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+            autoSummitBtn.Text = "⚡ AUTO SUMMIT: OFF"
+            autoSummitBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+            autoSummitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
             showNotification("⏹️ Auto Summit NONAKTIF", Color3.fromRGB(100, 255, 100))
         end
     end)
@@ -411,93 +537,6 @@ local function createUI()
     
     minimizeBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
-        
         if isMinimized then
-            -- Hide all elements except title and buttons
-            counterLabel.Visible = false
-            summitBtn.Visible = false
-            autoBtn.Visible = false
-            hopBtn.Visible = false
-            glow.Visible = false
-            
-            -- Resize and change text
-            mainFrame.Size = minimizedSize
-            minimizeBtn.Text = "□"
-            title.Text = "🏔️ SUMMIT (" .. summitCount .. ")"
-        else
-            -- Show all elements
-            counterLabel.Visible = true
-            summitBtn.Visible = true
-            autoBtn.Visible = true
-            hopBtn.Visible = true
-            glow.Visible = true
-            
-            -- Restore size and text
-            mainFrame.Size = originalSize
-            minimizeBtn.Text = "−"
-            title.Text = "🏔️ SUMMIT AUTO"
-        end
-    end)
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        autoSummitEnabled = false
-        screenGui:Destroy()
-        showNotification("👋 Summit Auto ditutup", Color3.fromRGB(255, 255, 100))
-    end)
-    
-    -- Drag functionality
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-        end
-    end)
-    
-    mainFrame.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    
-    mainFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-end
-
--- Spawn protection (respawn di puncak jika sudah pernah sampai)
-local function setupSpawnProtection()
-    player.CharacterAdded:Connect(function(character)
-        wait(1) -- Tunggu character fully loaded
-        if summitCount > 0 then
-            wait(2) -- Tunggu spawning selesai
-            teleportTo(SUMMIT_POS, "Puncak (Auto Spawn)")
-        end
-    end)
-end
-
--- Initialize
-showNotification("🚀 Summit Auto Script Loaded!", Color3.fromRGB(100, 255, 100))
-createUI()
-setupSpawnProtection()
-
--- Auto-detect summit dari leaderstats jika ada
-spawn(function()
-    while true do
-        local leaderstats = player:FindFirstChild("leaderstats")
-        if leaderstats then
-            local summitStat = leaderstats:FindFirstChild("Summit") or leaderstats:FindFirstChild("Summits") or leaderstats:FindFirstChild("summit")
-            if summitStat then
-                summitCount = summitStat.Value
-            end
-        end
-        wait(1)
-    end
-end)
+            mainFrame.Size = UDim2.new(0, 400, 0, 40)
+            tabContainer.Visible = fal
