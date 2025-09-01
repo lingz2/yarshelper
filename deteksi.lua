@@ -1,4 +1,4 @@
--- UNIVERSAL GUNUNG FINAL
+-- UNIVERSAL GUNUNG FINAL REVISI
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -10,7 +10,6 @@ local Workspace = game:GetService("Workspace")
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name = "GunungHelperGUI"
 
--- Popup besar untuk info
 local PopupLabel = Instance.new("TextLabel", ScreenGui)
 PopupLabel.Size = UDim2.new(0,400,0,100)
 PopupLabel.Position = UDim2.new(0.5,-200,0,50)
@@ -89,10 +88,10 @@ local function MakeButton(text,callback)
     return btn
 end
 
--- Scan map data
+-- Scan map
 local checkpoints, summit = {}, nil
 local function ScanMap()
-    checkpoints,summit = {},nil
+    checkpoints, summit = {}, nil
     local mapName = workspace.Name or "Unknown Map"
 
     for _,v in pairs(Workspace:GetDescendants()) do
@@ -107,10 +106,10 @@ local function ScanMap()
     end
     table.sort(checkpoints,function(a,b) return a.Position.Y<b.Position.Y end)
 
-    -- Deteksi admin/dev di server
+    -- Admin/dev
     local admins = {}
     for _,plr in pairs(Players:GetPlayers()) do
-        if plr:GetRankInGroup(1) > 0 or plr.UserId==123456 then -- ganti 123456 jika developer tertentu
+        if plr:GetRankInGroup(1) > 0 or plr.UserId==123456 then -- ganti jika developer tertentu
             table.insert(admins,plr.Name)
         end
     end
@@ -131,29 +130,26 @@ local function ScanMap()
                  "\n🏁 Summit via CP?: "..(#checkpoints>0 and "Ya" or "Tidak")..
                  "\n👑 Admin/Dev di server: "..(#admins>0 and table.concat(admins,", ") or "Tidak ada")..
                  "\n🛡 Anticheat: "..(anticheatDetected and "Ada" or "Tidak ada")..
-                 "\n⛔ Fitur terlarang: "..(#bannedFeatures>0 and table.concat(bannedFeatures,", ") or "Tidak ada")
+                 "\n⛔ Fitur terlarang: "..(#bannedFeatures>0 and table.concat(bannedFeatures,", ") or "Tidak ada")..
+                 "\n📍 CP terdeteksi: "..#checkpoints
     ShowPopup(info)
 end
 
--- Tombol scan
 local scanBtn = MakeButton("📡 Scan Map",ScanMap)
 scanBtn.Position = UDim2.new(0,5,0,0)
 scanBtn.Parent = Scroller
 
 -- Hide/show GUI
-local hidden=false
 HideBtn.MouseButton1Click:Connect(function()
-    hidden=true
     MainFrame.Visible=false
     ShowBtn.Visible=true
 end)
 ShowBtn.MouseButton1Click:Connect(function()
-    hidden=false
     MainFrame.Visible=true
     ShowBtn.Visible=false
 end)
 
--- Teleport tombol CP & Summit
+-- Teleport tombol dinamis
 local function GenerateTeleportButtons()
     local y=50
     for i,cp in ipairs(checkpoints) do
@@ -185,7 +181,7 @@ local generateBtn = MakeButton("🗺 Generate Teleport Buttons",GenerateTeleport
 generateBtn.Position = UDim2.new(0,5,0,40)
 generateBtn.Parent = Scroller
 
--- Billboard objek di map saja
+-- Billboard hanya objek map
 local maxDistance = 25
 local function CreateBillboard(part)
     if part:FindFirstChild("NameBillboard") then return end
@@ -204,7 +200,7 @@ local function CreateBillboard(part)
     label.Text=part.Name
 end
 
--- Deteksi objek dipijak
+-- Objek dipijak
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
