@@ -1,221 +1,169 @@
--- UNIVERSAL GUNUNG FINAL REVISI
+-- Auto Summit CKPTW Ultra Final
+-- LocalScript di StarterPlayerScripts
+
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
-local TeleportService = game:GetService("TeleportService")
-local Workspace = game:GetService("Workspace")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
+local TweenTime = 0.5
 
--- GUI utama
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "GunungHelperGUI"
+-- Daftar checkpoint + finis
+local checkpoints = {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","finis"}
 
-local PopupLabel = Instance.new("TextLabel", ScreenGui)
-PopupLabel.Size = UDim2.new(0,400,0,100)
-PopupLabel.Position = UDim2.new(0.5,-200,0,50)
-PopupLabel.BackgroundColor3 = Color3.fromRGB(50,150,50)
-PopupLabel.TextColor3 = Color3.new(1,1,1)
-PopupLabel.Font = Enum.Font.SourceSansBold
-PopupLabel.TextScaled = true
-PopupLabel.TextWrapped = true
-PopupLabel.BackgroundTransparency = 0.3
-PopupLabel.Text = ""
-local lastPopup = nil
+-- Leaderboard simulasi
+local summitCount = 0
+local checkpointReached = {}
 
-local function ShowPopup(msg,color)
-    color = color or Color3.fromRGB(50,150,50)
-    if lastPopup == msg then return end
-    lastPopup = msg
-    PopupLabel.Text = msg
-    PopupLabel.BackgroundColor3 = color
-    TweenService:Create(PopupLabel, TweenInfo.new(0.3), {BackgroundTransparency=0.3}):Play()
-    delay(2,function()
-        TweenService:Create(PopupLabel, TweenInfo.new(0.3), {BackgroundTransparency=1}):Play()
-        lastPopup = nil
-    end)
-end
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TeleportUI"
+ScreenGui.Parent = PlayerGui
 
--- GUI frame
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0,320,0,450)
-MainFrame.Position = UDim2.new(0,20,0.5,-225)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-MainFrame.BorderSizePixel = 0
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 550)
+MainFrame.Position = UDim2.new(0, 10, 0.5, -275)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1,0,0,40)
-Title.Text = "🗻 Gunung Helper"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextScaled = true
-Title.BackgroundColor3 = Color3.fromRGB(40,40,40)
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0,5)
+UIListLayout.Parent = MainFrame
 
-local HideBtn = Instance.new("TextButton", MainFrame)
-HideBtn.Size = UDim2.new(0,40,0,40)
-HideBtn.Position = UDim2.new(1,-40,0,0)
-HideBtn.Text = "-"
-HideBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-HideBtn.TextColor3 = Color3.new(1,1,1)
-
-local ShowBtn = Instance.new("TextButton", ScreenGui)
-ShowBtn.Size = UDim2.new(0,120,0,40)
-ShowBtn.Position = UDim2.new(0,20,0.5,-20)
-ShowBtn.Text = "Show Helper"
-ShowBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-ShowBtn.TextColor3 = Color3.new(1,1,1)
-ShowBtn.Font = Enum.Font.SourceSansBold
-ShowBtn.TextScaled = true
-ShowBtn.Visible = false
-
-local Scroller = Instance.new("ScrollingFrame", MainFrame)
-Scroller.Size = UDim2.new(1,0,1,-40)
-Scroller.Position = UDim2.new(0,0,0,40)
-Scroller.CanvasSize = UDim2.new(0,0,0,0)
-Scroller.ScrollBarThickness = 6
-Scroller.BackgroundTransparency = 1
-
--- Tombol helper
-local function MakeButton(text,callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,-10,0,35)
-    btn.Position = UDim2.new(0,5,0,0)
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextScaled = true
-    btn.Text = text
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
--- Scan map
-local checkpoints, summit = {}, nil
-local function ScanMap()
-    checkpoints, summit = {}, nil
-    local mapName = workspace.Name or "Unknown Map"
-
-    for _,v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            local lname = v.Name:lower()
-            if lname:find("cp") or lname:find("checkpoint") or lname:find("pos") or tonumber(lname) then
-                table.insert(checkpoints,v)
-            elseif lname:find("summit") or lname:find("puncak") or lname:find("peak") then
-                summit = v
-            end
-        end
-    end
-    table.sort(checkpoints,function(a,b) return a.Position.Y<b.Position.Y end)
-
-    -- Admin/dev
-    local admins = {}
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr:GetRankInGroup(1) > 0 or plr.UserId==123456 then -- ganti jika developer tertentu
-            table.insert(admins,plr.Name)
-        end
-    end
-
-    -- Anticheat sederhana
-    local anticheatDetected = false
-    for _,v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("Script") or v:IsA("LocalScript") then
-            if v.Name:lower():find("anti") then anticheatDetected=true end
-        end
-    end
-
-    local bannedFeatures = {}
-    if Workspace:FindFirstChild("FlyScript") then table.insert(bannedFeatures,"Fly") end
-    if Workspace:FindFirstChild("SpeedScript") then table.insert(bannedFeatures,"Speed") end
-
-    local info = "📌 Map: "..mapName..
-                 "\n🏁 Summit via CP?: "..(#checkpoints>0 and "Ya" or "Tidak")..
-                 "\n👑 Admin/Dev di server: "..(#admins>0 and table.concat(admins,", ") or "Tidak ada")..
-                 "\n🛡 Anticheat: "..(anticheatDetected and "Ada" or "Tidak ada")..
-                 "\n⛔ Fitur terlarang: "..(#bannedFeatures>0 and table.concat(bannedFeatures,", ") or "Tidak ada")..
-                 "\n📍 CP terdeteksi: "..#checkpoints
-    ShowPopup(info)
-end
-
-local scanBtn = MakeButton("📡 Scan Map",ScanMap)
-scanBtn.Position = UDim2.new(0,5,0,0)
-scanBtn.Parent = Scroller
-
--- Hide/show GUI
-HideBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible=false
-    ShowBtn.Visible=true
-end)
-ShowBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible=true
-    ShowBtn.Visible=false
+-- Show/Hide UI
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 300, 0, 30)
+ToggleButton.Position = UDim2.new(0,10,0.5,-310)
+ToggleButton.Text = "Hide UI"
+ToggleButton.Parent = ScreenGui
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    ToggleButton.Text = MainFrame.Visible and "Hide UI" or "Show UI"
 end)
 
--- Teleport tombol dinamis
-local function GenerateTeleportButtons()
-    local y=50
-    for i,cp in ipairs(checkpoints) do
-        local b = MakeButton("CP"..i.." ("..cp.Name..")",function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(cp.Position + Vector3.new(0,5,0))
-                ShowPopup("➡️ Teleport ke CP"..i.." ("..cp.Name..")")
-            end
-        end)
-        b.Position = UDim2.new(0,5,0,y)
-        b.Parent = Scroller
-        y=y+40
+-- Start/Stop Auto Loop
+local AutoLoop = false
+local AutoLoopButton = Instance.new("TextButton")
+AutoLoopButton.Size = UDim2.new(0, 280, 0, 25)
+AutoLoopButton.BackgroundColor3 = Color3.fromRGB(70,120,70)
+AutoLoopButton.TextColor3 = Color3.fromRGB(255,255,255)
+AutoLoopButton.Text = "Start Auto Loop"
+AutoLoopButton.Parent = MainFrame
+AutoLoopButton.MouseButton1Click:Connect(function()
+    AutoLoop = not AutoLoop
+    AutoLoopButton.Text = AutoLoop and "Stop Auto Loop" or "Start Auto Loop"
+end)
+
+-- Teleport langsung ke finis
+local TeleportFinisBtn = Instance.new("TextButton")
+TeleportFinisBtn.Size = UDim2.new(0, 280, 0, 25)
+TeleportFinisBtn.BackgroundColor3 = Color3.fromRGB(120,50,50)
+TeleportFinisBtn.TextColor3 = Color3.fromRGB(255,255,255)
+TeleportFinisBtn.Text = "Teleport Langsung ke FINIS"
+TeleportFinisBtn.Parent = MainFrame
+TeleportFinisBtn.MouseButton1Click:Connect(function()
+    local obj = workspace:FindFirstChild("finis")
+    if obj then
+        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+            TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = obj.CFrame + Vector3.new(0,3,0)}):Play()
+            notify("Teleported langsung ke FINIS")
+        end
     end
-    if summit then
-        local b = MakeButton("🏔 Summit ("..summit.Name..")",function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(summit.Position + Vector3.new(0,5,0))
-                ShowPopup("➡️ Teleport ke Summit ("..summit.Name..")")
-            end
-        end)
-        b.Position = UDim2.new(0,5,0,y)
-        b.Parent = Scroller
-        y=y+40
+end)
+
+-- Timer label
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(0, 280, 0, 25)
+TimerLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
+TimerLabel.TextColor3 = Color3.fromRGB(255,255,255)
+TimerLabel.Text = "Summit Time: 0s"
+TimerLabel.Parent = MainFrame
+
+local startTime = 0
+local timerActive = false
+
+-- Leaderboard label
+local LeaderLabel = Instance.new("TextLabel")
+LeaderLabel.Size = UDim2.new(0, 280, 0, 25)
+LeaderLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
+LeaderLabel.TextColor3 = Color3.fromRGB(255,255,255)
+LeaderLabel.Text = "Summits: 0 | Checkpoints reached: 0"
+LeaderLabel.Parent = MainFrame
+
+-- Fungsi teleport Tween
+local function teleportTo(objName)
+    local obj = workspace:FindFirstChild(objName)
+    if obj and obj:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+        local targetCFrame = obj.CFrame + Vector3.new(0,3,0)
+        local tween = TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
+        tween:Play()
+        tween.Completed:Wait()
     end
-    Scroller.CanvasSize = UDim2.new(0,0,0,y)
 end
 
-local generateBtn = MakeButton("🗺 Generate Teleport Buttons",GenerateTeleportButtons)
-generateBtn.Position = UDim2.new(0,5,0,40)
-generateBtn.Parent = Scroller
-
--- Billboard hanya objek map
-local maxDistance = 25
-local function CreateBillboard(part)
-    if part:FindFirstChild("NameBillboard") then return end
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "NameBillboard"
-    billboard.Size = UDim2.new(0,100,0,40)
-    billboard.Adornee = part
-    billboard.AlwaysOnTop = true
-    billboard.Parent = part
-    local label = Instance.new("TextLabel",billboard)
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency=1
-    label.TextColor3=Color3.new(1,1,1)
-    label.TextScaled=true
-    label.Font=Enum.Font.SourceSansBold
-    label.Text=part.Name
+-- Fungsi Notifikasi
+function notify(msg)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Auto Summit CKPTW",
+        Text = msg,
+        Duration = 2
+    })
 end
 
--- Objek dipijak
-RunService.Heartbeat:Connect(function()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    for _,part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not part:IsDescendantOf(Players) then
-            local dist = (part.Position-hrp.Position).Magnitude
-            if dist <= maxDistance then
-                CreateBillboard(part)
-                local ray = Ray.new(hrp.Position, Vector3.new(0,-3,0))
-                local hit,pos = workspace:FindPartOnRay(ray,char)
-                if hit == part then
-                    ShowPopup("▶️ Dipijak: "..part.Name)
+-- Auto Loop checkpoint by checkpoint
+spawn(function()
+    while true do
+        if AutoLoop then
+            startTime = tick()
+            timerActive = true
+            checkpointReached = {}
+            for _, name in ipairs(checkpoints) do
+                teleportTo(name)
+                notify("Sampai di checkpoint "..name)
+                checkpointReached[name] = true
+                LeaderLabel.Text = "Summits: "..summitCount.." | Checkpoints reached: "..#checkpointReached
+                wait(0.3)
+                -- Auto click puncak
+                if name == "finis" then
+                    if LocalPlayer.Character:FindFirstChild("Humanoid") then
+                        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                    end
+                    summitCount = summitCount + 1
                 end
             end
+            teleportTo("1")
+            notify("Kembali ke basecamp")
+            timerActive = false
+        else
+            wait(1)
         end
     end
 end)
+
+-- Update Timer
+spawn(function()
+    while true do
+        if timerActive then
+            local elapsed = math.floor(tick() - startTime)
+            TimerLabel.Text = "Summit Time: "..elapsed.."s"
+        end
+        wait(0.2)
+    end
+end)
+
+-- Tombol teleport manual tiap checkpoint
+for _, name in ipairs(checkpoints) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 280, 0, 25)
+    btn.Text = "Teleport ke "..name
+    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Parent = MainFrame
+
+    btn.MouseButton1Click:Connect(function()
+        teleportTo(name)
+        notify("Teleported ke "..name)
+        checkpointReached[name] = true
+        LeaderLabel.Text = "Summits: "..summitCount.." | Checkpoints reached: "..#checkpointReached
+    end)
+end
