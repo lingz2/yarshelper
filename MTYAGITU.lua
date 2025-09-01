@@ -1,4 +1,4 @@
--- Auto Summit Final Ultra
+-- Ultra Final Auto Summit + Server Hop + Respawn Reset
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
@@ -29,56 +29,138 @@ if not LocalPlayer:FindFirstChild("AutoSummitStatus") then
     local Direct=Instance.new("BoolValue");Direct.Name="LoopDirect";Direct.Value=false;Direct.Parent=status
 end
 
--- Teleport + notify
+-- Notify helper
 local function notify(msg)
     game.StarterGui:SetCore("SendNotification",{Title="Auto Summit",Text=msg,Duration=2})
 end
 
+-- Teleport helper
 local function teleportTo(cf, summitDelay)
     local root=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if root then
         TweenService:Create(root,TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=cf}):Play()
-        if summitDelay then wait(20) else wait(math.random(10,30)/10) end
+        if summitDelay then wait(60) else wait(math.random(10,30)/10) end
         notify("Teleport berhasil!")
     end
 end
 
--- UI creation (tidak bisa digeser)
+-- Server Hop helper
+local function serverHop()
+    local success,servers=pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+    end)
+    if not success then notify("Gagal mengambil server"); return end
+    local bestServer
+    local fewestPlayers=math.huge
+    for _,v in ipairs(servers.data or {}) do
+        if v.playing < fewestPlayers and v.maxPlayers>v.playing then
+            fewestPlayers=v.playing
+            bestServer=v.id
+        end
+    end
+    if bestServer then
+        notify("Server hop ke server dengan "..fewestPlayers.." player...")
+        wait(2)
+        TeleportService:TeleportToPlaceInstance(PlaceId, bestServer, LocalPlayer)
+    else
+        notify("Tidak ada server kosong tersedia!")
+    end
+end
+
+-- Reset summit / auto loop saat respawn
+local function resetOnRespawn()
+    if LocalPlayer.Character then
+        LocalPlayer.Character:WaitForChild("Humanoid").Died:Connect(function()
+            wait(1)
+            LocalPlayer.AutoSummitStatus.LoopViaCP.Value=false
+            LocalPlayer.AutoSummitStatus.LoopDirect.Value=false
+            notify("Summit reset setelah respawn, toggle dimatikan")
+        end)
+    end
+    Players.PlayerAdded:Connect(function(player)
+        if player==LocalPlayer then
+            local character=player.Character or player.CharacterAdded:Wait()
+            character:WaitForChild("HumanoidRootPart")
+            LocalPlayer.AutoSummitStatus.LoopViaCP.Value=false
+            LocalPlayer.AutoSummitStatus.LoopDirect.Value=false
+            notify("Summit reset, toggle auto loop dimatikan")
+        end
+    end)
+end
+
+resetOnRespawn()
+
+-- UI creation
 local function CreateUI()
     if PlayerGui:FindFirstChild("AutoSummitUI") then return end
     local ScreenGui=Instance.new("ScreenGui")
     ScreenGui.Name="AutoSummitUI"
     ScreenGui.Parent=PlayerGui
 
-    -- Main frame
     local MainFrame=Instance.new("Frame")
-    MainFrame.Size=UDim2.new(0,200,0,350)
+    MainFrame.Size=UDim2.new(0,220,0,350)
     MainFrame.Position=UDim2.new(0,10,0.5,-175)
     MainFrame.BackgroundColor3=Color3.fromRGB(30,30,30)
     MainFrame.BorderSizePixel=0
     MainFrame.Visible=true
     MainFrame.Parent=ScreenGui
 
-    local Scroll=Instance.new("ScrollingFrame")
-    Scroll.Size=UDim2.new(1,0,1,0)
-    Scroll.ScrollBarThickness=6
-    Scroll.BackgroundTransparency=1
-    Scroll.Parent=MainFrame
+    local TabsFrame=Instance.new("Frame")
+    TabsFrame.Size=UDim2.new(1,0,0,25)
+    TabsFrame.BackgroundTransparency=1
+    TabsFrame.Parent=MainFrame
 
-    local UIListLayout=Instance.new("UIListLayout")
-    UIListLayout.Padding=UDim.new(0,3)
-    UIListLayout.Parent=Scroll
-    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        Scroll.CanvasSize = UDim2.new(0,0,0,UIListLayout.AbsoluteContentSize.Y + 5)
+    local TeleportTab = Instance.new("TextButton")
+    TeleportTab.Size = UDim2.new(0.5,0,1,0)
+    TeleportTab.Text="Teleport"
+    TeleportTab.BackgroundColor3=Color3.fromRGB(60,60,60)
+    TeleportTab.TextColor3=Color3.fromRGB(255,255,255)
+    TeleportTab.Parent=TabsFrame
+
+    local InfoTab = Instance.new("TextButton")
+    InfoTab.Size = UDim2.new(0.5,0,1,0)
+    InfoTab.Position = UDim2.new(0.5,0,0,0)
+    InfoTab.Text="Informasi"
+    InfoTab.BackgroundColor3=Color3.fromRGB(40,40,40)
+    InfoTab.TextColor3=Color3.fromRGB(255,255,255)
+    InfoTab.Parent=TabsFrame
+
+    local TeleportFrame = Instance.new("ScrollingFrame")
+    TeleportFrame.Size=UDim2.new(1,0,1,-25)
+    TeleportFrame.Position=UDim2.new(0,0,0,25)
+    TeleportFrame.ScrollBarThickness=6
+    TeleportFrame.BackgroundTransparency=1
+    TeleportFrame.Parent=MainFrame
+
+    local InfoFrame = Instance.new("ScrollingFrame")
+    InfoFrame.Size=UDim2.new(1,0,1,-25)
+    InfoFrame.Position=UDim2.new(0,0,0,25)
+    InfoFrame.ScrollBarThickness=6
+    InfoFrame.BackgroundTransparency=1
+    InfoFrame.Visible=false
+    InfoFrame.Parent=MainFrame
+
+    -- Tab switching
+    TeleportTab.MouseButton1Click:Connect(function()
+        TeleportFrame.Visible=true
+        InfoFrame.Visible=false
+        TeleportTab.BackgroundColor3=Color3.fromRGB(60,60,60)
+        InfoTab.BackgroundColor3=Color3.fromRGB(40,40,40)
+    end)
+    InfoTab.MouseButton1Click:Connect(function()
+        TeleportFrame.Visible=false
+        InfoFrame.Visible=true
+        TeleportTab.BackgroundColor3=Color3.fromRGB(40,40,40)
+        InfoTab.BackgroundColor3=Color3.fromRGB(60,60,60)
     end)
 
-    -- Hide/Show
+    -- Hide/Show draggable
     local HideBtn=Instance.new("TextButton")
-    HideBtn.Size=UDim2.new(0,200,0,25)
+    HideBtn.Size=UDim2.new(1,0,0,25)
     HideBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
     HideBtn.TextColor3=Color3.fromRGB(255,255,255)
     HideBtn.Text="Hide UI"
-    HideBtn.Parent=Scroll
+    HideBtn.Parent=TeleportFrame
 
     local ShowBtn=Instance.new("TextButton")
     ShowBtn.Size=UDim2.new(0,80,0,25)
@@ -90,19 +172,15 @@ local function CreateUI()
     ShowBtn.Parent=ScreenGui
 
     -- Dragging ShowBtn
-    local dragging=false
-    local dragInput,mousePos,startPos
+    local dragging=false; local dragInput,mousePos,startPos
     local function update(input)
         local delta = input.Position - mousePos
         ShowBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
                                      startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-
     ShowBtn.InputBegan:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then
-            dragging=true
-            mousePos=input.Position
-            startPos=ShowBtn.Position
+            dragging=true; mousePos=input.Position; startPos=ShowBtn.Position
             input.Changed:Connect(function()
                 if input.UserInputState==Enum.UserInputState.End then dragging=false end
             end)
@@ -126,115 +204,104 @@ local function CreateUI()
         ShowBtn.Visible=false
     end)
 
-    -- Toggle helper
-    local function createToggle(name,boolValue)
+    -- Toggle switches
+    local function createToggle(name,boolValue,parent)
         local frame=Instance.new("Frame")
-        frame.Size=UDim2.new(0,180,0,20)
-        frame.BackgroundColor3=Color3.fromRGB(45,45,45)
-        frame.Parent=Scroll
+        frame.Size=UDim2.new(1,0,0,25)
+        frame.BackgroundTransparency=1
+        frame.Parent=parent
 
         local label=Instance.new("TextLabel")
         label.Size=UDim2.new(0.6,0,1,0)
-        label.Text=name;label.TextColor3=Color3.fromRGB(255,255,255)
+        label.Text=name
         label.BackgroundTransparency=1
+        label.TextColor3=Color3.fromRGB(255,255,255)
         label.Parent=frame
 
         local slider=Instance.new("Frame")
-        slider.Size=UDim2.new(0,40,0,16)
-        slider.Position=UDim2.new(0.65,0,0,2)
-        slider.BackgroundColor3=Color3.fromRGB(70,70,70)
+        slider.Size=UDim2.new(0.35,0,0.5,0)
+        slider.Position=UDim2.new(0.6,0,0.25,0)
+        slider.BackgroundColor3=Color3.fromRGB(100,100,100)
         slider.Parent=frame
 
-        local knob=Instance.new("TextButton")
-        knob.Size=UDim2.new(0,16,0,16)
-        knob.Position=boolValue.Value and UDim2.new(1,-16,0,0) or UDim2.new(0,0,0,0)
-        knob.Text=""
-        knob.BackgroundColor3=boolValue.Value and Color3.fromRGB(50,200,50) or Color3.fromRGB(200,50,50)
+        local knob=Instance.new("Frame")
+        knob.Size=UDim2.new(0,18,0,16)
+        knob.Position=boolValue.Value and UDim2.new(0.5,0,0,0) or UDim2.new(0,0,0,0)
+        knob.BackgroundColor3=Color3.fromRGB(200,200,200)
         knob.Parent=slider
 
-        knob.MouseButton1Click:Connect(function()
+        local function toggle()
             boolValue.Value=not boolValue.Value
-            knob.Position=boolValue.Value and UDim2.new(1,-16,0,0) or UDim2.new(0,0,0,0)
-            knob.BackgroundColor3=boolValue.Value and Color3.fromRGB(50,200,50) or Color3.fromRGB(200,50,50)
+            knob.Position=boolValue.Value and UDim2.new(0.5,0,0,0) or UDim2.new(0,0,0,0)
+        end
+        slider.InputBegan:Connect(function(input)
+            if input.UserInputType==Enum.UserInputType.MouseButton1 then toggle() end
         end)
         return boolValue
     end
 
-    local LoopViaCP=createToggle("Loop via CP",LocalPlayer.AutoSummitStatus.LoopViaCP)
-    local LoopDirect=createToggle("Loop Direct",LocalPlayer.AutoSummitStatus.LoopDirect)
+    local LoopViaCP=createToggle("Loop Via CP",LocalPlayer.AutoSummitStatus.LoopViaCP,TeleportFrame)
+    local LoopDirect=createToggle("Loop Direct",LocalPlayer.AutoSummitStatus.LoopDirect,TeleportFrame)
 
-    -- Manual teleport
-    for _, name in ipairs(checkpointsOrder) do
-        local cf=checkpointsCFrame[name]
+    -- Manual teleport buttons
+    for _,name in ipairs(checkpointsOrder) do
         local btn=Instance.new("TextButton")
-        btn.Size=UDim2.new(0,180,0,18)
+        btn.Size=UDim2.new(1,0,0,25)
+        btn.Text="Teleport "..name
         btn.BackgroundColor3=Color3.fromRGB(60,60,60)
         btn.TextColor3=Color3.fromRGB(255,255,255)
-        btn.Text="→ "..name
-        btn.Parent=Scroll
-        btn.MouseButton1Click:Connect(function() teleportTo(cf,name=="Summit") end)
+        btn.Parent=TeleportFrame
+
+        btn.MouseButton1Click:Connect(function()
+            teleportTo(checkpointsCFrame[name],name=="Summit")
+        end)
     end
 
-    -- Reset summit
-    local resetBtn=Instance.new("TextButton")
-    resetBtn.Size=UDim2.new(0,180,0,20)
-    resetBtn.Text="Reset Summit"
-    resetBtn.BackgroundColor3=Color3.fromRGB(200,100,50)
-    resetBtn.TextColor3=Color3.fromRGB(255,255,255)
-    resetBtn.Parent=Scroll
-    resetBtn.MouseButton1Click:Connect(function()
-        if LocalPlayer.Character then
-            LocalPlayer.Character:BreakJoints()
-            notify("Summit reset! Respawned at basecamp.")
-        end
-    end)
+    -- Server Hop button
+    local hopBtn = Instance.new("TextButton")
+    hopBtn.Size = UDim2.new(1,0,0,25)
+    hopBtn.Text = "Server Hop"
+    hopBtn.BackgroundColor3 = Color3.fromRGB(120,60,60)
+    hopBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    hopBtn.Parent = TeleportFrame
+    hopBtn.MouseButton1Click:Connect(function() serverHop() end)
 
-    -- Server hop
-    local hopBtn=Instance.new("TextButton")
-    hopBtn.Size=UDim2.new(0,180,0,20)
-    hopBtn.Text="Server Hop"
-    hopBtn.BackgroundColor3=Color3.fromRGB(100,150,250)
-    hopBtn.TextColor3=Color3.fromRGB(255,255,255)
-    hopBtn.Parent=Scroll
-    hopBtn.MouseButton1Click:Connect(function()
-        local success,servers=pcall(function()
-            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
-        end)
-        if success and servers and servers.data then
-            table.sort(servers.data,function(a,b) return a.playing<b.playing end)
-            local chosen
-            for _,s in pairs(servers.data) do
-                if s.id~=game.JobId then chosen=s break end
-            end
-            if chosen then
-                TeleportService:TeleportToPlaceInstance(PlaceId,chosen.id,LocalPlayer)
-            else
-                notify("Tidak ada server tersedia!")
-            end
-        else
-            notify("Gagal fetch server list!")
-        end
-    end)
+    -- Info tab: waktu minimum
+    local infoLabel=Instance.new("TextLabel")
+    infoLabel.Size=UDim2.new(1,0,0,25)
+    infoLabel.BackgroundTransparency=1
+    infoLabel.TextColor3=Color3.fromRGB(255,255,255)
+    infoLabel.Text="Waktu minimum Basecamp → Summit: belum dihitung"
+    infoLabel.Parent=InfoFrame
+
+    local lastStart,lastEnd
+    local function startTimer() lastStart=tick() end
+    local function endTimer()
+        lastEnd=tick()
+        local elapsed=math.floor(lastEnd-lastStart)
+        infoLabel.Text="Waktu Basecamp → Summit: "..elapsed.." detik"
+    end
 
     -- Auto loop
     spawn(function()
         while true do
-            if LoopViaCP.Value then
+            if LoopViaCP.Value or LoopDirect.Value then
+                startTimer()
                 teleportTo(checkpointsCFrame["Basecamp"])
-                for _, cp in ipairs(checkpointsOrder) do
-                    if not LoopViaCP.Value then break end
-                    teleportTo(checkpointsCFrame[cp],cp=="Summit")
+                if LoopViaCP.Value then
+                    for i,cp in ipairs(checkpointsOrder) do
+                        if not LoopViaCP.Value then break end
+                        teleportTo(checkpointsCFrame[cp],cp=="Summit")
+                    end
+                elseif LoopDirect.Value then
+                    teleportTo(checkpointsCFrame["Summit"],true)
+                    wait(60)
                 end
                 teleportTo(checkpointsCFrame["Basecamp"])
-            elseif LoopDirect.Value then
-                teleportTo(checkpointsCFrame["Basecamp"])
-                if LoopDirect.Value then teleportTo(checkpointsCFrame["Summit"],true) end
-                teleportTo(checkpointsCFrame["Basecamp"])
-            else wait(0.5) end
+                endTimer()
+            else wait(1) end
         end
     end)
 end
 
--- Init
 CreateUI()
-LocalPlayer.CharacterAdded:Connect(function() wait(1) CreateUI() end)
