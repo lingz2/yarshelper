@@ -1,4 +1,4 @@
--- Ultra Final Auto Summit + Server Hop + Respawn Reset
+-- Ultra Final Auto Summit + Server Hop + Scrollable UI
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
@@ -8,7 +8,7 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local PlaceId = game.PlaceId
 
--- CFrame checkpoints & summit
+-- Checkpoints & Summit CFrame
 local checkpointsCFrame = {
     ["Basecamp"]=CFrame.new(-13,-82,-237),
     ["CP1"]=CFrame.new(-228,6,482),["CP2"]=CFrame.new(-167,62,852),
@@ -77,17 +77,7 @@ local function resetOnRespawn()
             notify("Summit reset setelah respawn, toggle dimatikan")
         end)
     end
-    Players.PlayerAdded:Connect(function(player)
-        if player==LocalPlayer then
-            local character=player.Character or player.CharacterAdded:Wait()
-            character:WaitForChild("HumanoidRootPart")
-            LocalPlayer.AutoSummitStatus.LoopViaCP.Value=false
-            LocalPlayer.AutoSummitStatus.LoopDirect.Value=false
-            notify("Summit reset, toggle auto loop dimatikan")
-        end
-    end)
 end
-
 resetOnRespawn()
 
 -- UI creation
@@ -125,33 +115,39 @@ local function CreateUI()
     InfoTab.TextColor3=Color3.fromRGB(255,255,255)
     InfoTab.Parent=TabsFrame
 
+    -- Teleport ScrollFrame
     local TeleportFrame = Instance.new("ScrollingFrame")
     TeleportFrame.Size=UDim2.new(1,0,1,-25)
     TeleportFrame.Position=UDim2.new(0,0,0,25)
-    TeleportFrame.ScrollBarThickness=6
     TeleportFrame.BackgroundTransparency=1
+    TeleportFrame.ScrollBarThickness=6
+    TeleportFrame.CanvasSize=UDim2.new(0,0,0,0)
     TeleportFrame.Parent=MainFrame
+    local teleportLayout = Instance.new("UIListLayout")
+    teleportLayout.Padding=UDim.new(0,5)
+    teleportLayout.Parent=TeleportFrame
 
+    -- Info ScrollFrame
     local InfoFrame = Instance.new("ScrollingFrame")
     InfoFrame.Size=UDim2.new(1,0,1,-25)
     InfoFrame.Position=UDim2.new(0,0,0,25)
-    InfoFrame.ScrollBarThickness=6
     InfoFrame.BackgroundTransparency=1
+    InfoFrame.ScrollBarThickness=6
+    InfoFrame.CanvasSize=UDim2.new(0,0,0,0)
     InfoFrame.Visible=false
     InfoFrame.Parent=MainFrame
+    local infoLayout = Instance.new("UIListLayout")
+    infoLayout.Padding=UDim.new(0,5)
+    infoLayout.Parent=InfoFrame
 
     -- Tab switching
     TeleportTab.MouseButton1Click:Connect(function()
-        TeleportFrame.Visible=true
-        InfoFrame.Visible=false
-        TeleportTab.BackgroundColor3=Color3.fromRGB(60,60,60)
-        InfoTab.BackgroundColor3=Color3.fromRGB(40,40,40)
+        TeleportFrame.Visible=true; InfoFrame.Visible=false
+        TeleportTab.BackgroundColor3=Color3.fromRGB(60,60,60); InfoTab.BackgroundColor3=Color3.fromRGB(40,40,40)
     end)
     InfoTab.MouseButton1Click:Connect(function()
-        TeleportFrame.Visible=false
-        InfoFrame.Visible=true
-        TeleportTab.BackgroundColor3=Color3.fromRGB(40,40,40)
-        InfoTab.BackgroundColor3=Color3.fromRGB(60,60,60)
+        TeleportFrame.Visible=false; InfoFrame.Visible=true
+        TeleportTab.BackgroundColor3=Color3.fromRGB(40,40,40); InfoTab.BackgroundColor3=Color3.fromRGB(60,60,60)
     end)
 
     -- Hide/Show draggable
@@ -187,9 +183,7 @@ local function CreateUI()
         end
     end)
     ShowBtn.InputChanged:Connect(function(input)
-        if input.UserInputType==Enum.UserInputType.MouseMovement then
-            dragInput=input
-        end
+        if input.UserInputType==Enum.UserInputType.MouseMovement then dragInput=input end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input==dragInput and dragging then update(input) end
@@ -207,32 +201,19 @@ local function CreateUI()
     -- Toggle switches
     local function createToggle(name,boolValue,parent)
         local frame=Instance.new("Frame")
-        frame.Size=UDim2.new(1,0,0,25)
-        frame.BackgroundTransparency=1
-        frame.Parent=parent
-
+        frame.Size=UDim2.new(1,0,0,25); frame.BackgroundTransparency=1; frame.Parent=parent
         local label=Instance.new("TextLabel")
-        label.Size=UDim2.new(0.6,0,1,0)
-        label.Text=name
-        label.BackgroundTransparency=1
-        label.TextColor3=Color3.fromRGB(255,255,255)
-        label.Parent=frame
-
+        label.Size=UDim2.new(0.6,0,1,0); label.Text=name; label.BackgroundTransparency=1; label.TextColor3=Color3.fromRGB(255,255,255); label.Parent=frame
         local slider=Instance.new("Frame")
-        slider.Size=UDim2.new(0.35,0,0.5,0)
-        slider.Position=UDim2.new(0.6,0,0.25,0)
-        slider.BackgroundColor3=Color3.fromRGB(100,100,100)
-        slider.Parent=frame
-
+        slider.Size=UDim2.new(0.35,0,0.5,0); slider.Position=UDim2.new(0.6,0,0.25,0); slider.BackgroundColor3=Color3.fromRGB(100,100,100); slider.Parent=frame
         local knob=Instance.new("Frame")
         knob.Size=UDim2.new(0,18,0,16)
         knob.Position=boolValue.Value and UDim2.new(0.5,0,0,0) or UDim2.new(0,0,0,0)
         knob.BackgroundColor3=Color3.fromRGB(200,200,200)
         knob.Parent=slider
-
         local function toggle()
-            boolValue.Value=not boolValue.Value
-            knob.Position=boolValue.Value and UDim2.new(0.5,0,0,0) or UDim2.new(0,0,0,0)
+            boolValue.Value = not boolValue.Value
+            knob.Position = boolValue.Value and UDim2.new(0.5,0,0,0) or UDim2.new(0,0,0,0)
         end
         slider.InputBegan:Connect(function(input)
             if input.UserInputType==Enum.UserInputType.MouseButton1 then toggle() end
@@ -246,7 +227,7 @@ local function CreateUI()
     -- Manual teleport buttons
     for _,name in ipairs(checkpointsOrder) do
         local btn=Instance.new("TextButton")
-        btn.Size=UDim2.new(1,0,0,25)
+        btn.Size=UDim2.new(1,0,0,30)
         btn.Text="Teleport "..name
         btn.BackgroundColor3=Color3.fromRGB(60,60,60)
         btn.TextColor3=Color3.fromRGB(255,255,255)
@@ -257,36 +238,22 @@ local function CreateUI()
         end)
     end
 
-    -- Server Hop button
-    local hopBtn = Instance.new("TextButton")
-    hopBtn.Size = UDim2.new(1,0,0,25)
-    hopBtn.Text = "Server Hop"
-    hopBtn.BackgroundColor3 = Color3.fromRGB(120,60,60)
-    hopBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    hopBtn.Parent = TeleportFrame
-    hopBtn.MouseButton1Click:Connect(function() serverHop() end)
+    TeleportFrame.CanvasSize = UDim2.new(0,0,0,teleportLayout.AbsoluteContentSize.Y+10)
+    InfoFrame.CanvasSize = UDim2.new(0,0,0,infoLayout.AbsoluteContentSize.Y+10)
 
-    -- Info tab: waktu minimum
+    -- Info label
     local infoLabel=Instance.new("TextLabel")
     infoLabel.Size=UDim2.new(1,0,0,25)
     infoLabel.BackgroundTransparency=1
     infoLabel.TextColor3=Color3.fromRGB(255,255,255)
     infoLabel.Text="Waktu minimum Basecamp → Summit: belum dihitung"
+    infoLabel.TextWrapped=true
     infoLabel.Parent=InfoFrame
-
-    local lastStart,lastEnd
-    local function startTimer() lastStart=tick() end
-    local function endTimer()
-        lastEnd=tick()
-        local elapsed=math.floor(lastEnd-lastStart)
-        infoLabel.Text="Waktu Basecamp → Summit: "..elapsed.." detik"
-    end
 
     -- Auto loop
     spawn(function()
         while true do
             if LoopViaCP.Value or LoopDirect.Value then
-                startTimer()
                 teleportTo(checkpointsCFrame["Basecamp"])
                 if LoopViaCP.Value then
                     for i,cp in ipairs(checkpointsOrder) do
@@ -295,10 +262,9 @@ local function CreateUI()
                     end
                 elseif LoopDirect.Value then
                     teleportTo(checkpointsCFrame["Summit"],true)
-                    wait(60)
+                    wait(60) -- loop 1 menit agar summit tercatat
                 end
                 teleportTo(checkpointsCFrame["Basecamp"])
-                endTimer()
             else wait(1) end
         end
     end)
