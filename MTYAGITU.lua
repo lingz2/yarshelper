@@ -1,4 +1,4 @@
--- Auto Summit Ultra Compact UI v1
+-- Auto Summit Ultra Compact v2
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -31,11 +31,15 @@ end
 local function notify(msg)
     game.StarterGui:SetCore("SendNotification",{Title="Auto Summit",Text=msg,Duration=2})
 end
-local function teleportTo(cf)
+local function teleportTo(cf, summitDelay)
     local root=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if root then
         TweenService:Create(root,TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=cf}):Play()
-        wait(math.random(10,30)/10)
+        if summitDelay then
+            wait(5) -- delay 5 detik untuk puncak
+        else
+            wait(math.random(10,30)/10)
+        end
         notify("Teleport berhasil!")
     end
 end
@@ -85,7 +89,7 @@ local function CreateCompactUI()
     ShowBtn.Visible=false
     ShowBtn.Parent=ScreenGui
 
-    -- Draggable
+    -- draggable ShowBtn
     local dragging,dragInput,mousePos,framePos=false,nil,nil,nil
     ShowBtn.InputBegan:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then
@@ -169,12 +173,12 @@ local function CreateCompactUI()
                 teleportTo(checkpointsCFrame["Basecamp"])
                 for _, cp in ipairs(checkpointsOrder) do
                     if not LoopViaCP.Value then break end
-                    teleportTo(checkpointsCFrame[cp])
+                    teleportTo(cp=="Summit" and checkpointsCFrame[cp] or checkpointsCFrame[cp], cp=="Summit")
                 end
                 teleportTo(checkpointsCFrame["Basecamp"])
             elseif LoopDirect.Value then
                 teleportTo(checkpointsCFrame["Basecamp"])
-                if LoopDirect.Value then teleportTo(checkpointsCFrame["Summit"]) end
+                if LoopDirect.Value then teleportTo(checkpointsCFrame["Summit"], true) end
                 teleportTo(checkpointsCFrame["Basecamp"])
             else wait(0.5) end
             wait(0.5)
@@ -190,7 +194,7 @@ local function CreateCompactUI()
         btn.TextColor3=Color3.fromRGB(255,255,255)
         btn.Text="→ "..name
         btn.Parent=Scroll
-        btn.MouseButton1Click:Connect(function() teleportTo(cf) end)
+        btn.MouseButton1Click:Connect(function() teleportTo(name=="Summit" and cf or cf, name=="Summit") end)
     end
 end
 
