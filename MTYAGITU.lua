@@ -1,11 +1,14 @@
--- Auto Summit Ultra Compact v2
+-- Auto Summit + Server Hop + Reset FINAL
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local PlaceId = game.PlaceId
 
--- CFrame checkpoint + summit
+-- CFrame checkpoints & summit
 local checkpointsCFrame = {
     ["Basecamp"]=CFrame.new(-13,-82,-237),["CP1"]=CFrame.new(-228,6,482),["CP2"]=CFrame.new(-167,62,852),
     ["CP3"]=CFrame.new(541,346,848),["CP4"]=CFrame.new(715,462,1409),["CP5"]=CFrame.new(727,650,451),
@@ -35,17 +38,13 @@ local function teleportTo(cf, summitDelay)
     local root=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if root then
         TweenService:Create(root,TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=cf}):Play()
-        if summitDelay then
-            wait(5) -- delay 5 detik untuk puncak
-        else
-            wait(math.random(10,30)/10)
-        end
+        if summitDelay then wait(5) else wait(math.random(10,30)/10) end
         notify("Teleport berhasil!")
     end
 end
 
--- Create ultra compact UI
-local function CreateCompactUI()
+-- UI creation
+local function CreateUI()
     if PlayerGui:FindFirstChild("AutoSummitCompact") then return end
     local ScreenGui=Instance.new("ScreenGui")
     ScreenGui.Name="AutoSummitCompact"
@@ -55,14 +54,12 @@ local function CreateCompactUI()
     MainFrame.Size=UDim2.new(0,180,0,200)
     MainFrame.Position=UDim2.new(0,10,0.5,-100)
     MainFrame.BackgroundColor3=Color3.fromRGB(30,30,30)
-    MainFrame.BackgroundTransparency=0.1
     MainFrame.BorderSizePixel=0
     MainFrame.Visible=true
     MainFrame.Parent=ScreenGui
 
     local Scroll=Instance.new("ScrollingFrame")
     Scroll.Size=UDim2.new(1,0,1,0)
-    Scroll.CanvasSize=UDim2.new(0,0,#checkpointsOrder*25+100)
     Scroll.ScrollBarThickness=6
     Scroll.BackgroundTransparency=1
     Scroll.Parent=MainFrame
@@ -71,7 +68,11 @@ local function CreateCompactUI()
     UIListLayout.Padding=UDim.new(0,3)
     UIListLayout.Parent=Scroll
 
-    -- Hide/Show
+    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Scroll.CanvasSize = UDim2.new(0,0,0,UIListLayout.AbsoluteContentSize.Y + 5)
+    end)
+
+    -- Hide/Show draggable
     local HideBtn=Instance.new("TextButton")
     HideBtn.Size=UDim2.new(0,180,0,20)
     HideBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
@@ -85,11 +86,10 @@ local function CreateCompactUI()
     ShowBtn.Text="yars cakep"
     ShowBtn.BackgroundColor3=Color3.fromRGB(150,50,200)
     ShowBtn.TextColor3=Color3.fromRGB(255,255,255)
-    ShowBtn.BackgroundTransparency=0.2
     ShowBtn.Visible=false
     ShowBtn.Parent=ScreenGui
 
-    -- draggable ShowBtn
+    -- Draggable ShowBtn
     local dragging,dragInput,mousePos,framePos=false,nil,nil,nil
     ShowBtn.InputBegan:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then
@@ -166,6 +166,21 @@ local function CreateCompactUI()
     local LoopViaCP=createToggle("Loop via CP",LocalPlayer.AutoSummitStatus.LoopViaCP)
     local LoopDirect=createToggle("Loop Direct",LocalPlayer.AutoSummitStatus.LoopDirect)
 
+    -- Server hop function
+    local function serverHop()
+        local success,servers=pcall(function()
+            return game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+        end)
+        if success and servers and servers.data then
+            for _,s in pairs(servers.data) do
+                if s.playing < 2 and s.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(PlaceId, s.id, LocalPlayer)
+                    break
+                end
+            end
+        end
+    end
+
     -- Auto loop
     spawn(function()
         while true do
@@ -196,8 +211,31 @@ local function CreateCompactUI()
         btn.Parent=Scroll
         btn.MouseButton1Click:Connect(function() teleportTo(name=="Summit" and cf or cf, name=="Summit") end)
     end
+
+    -- Reset summit button
+    local resetBtn=Instance.new("TextButton")
+    resetBtn.Size=UDim2.new(0,160,0,20)
+    resetBtn.Text="Reset Summit"
+    resetBtn.BackgroundColor3=Color3.fromRGB(200,100,50)
+    resetBtn.TextColor3=Color3.fromRGB(255,255,255)
+    resetBtn.Parent=Scroll
+    resetBtn.MouseButton1Click:Connect(function()
+        if LocalPlayer.Character then
+            LocalPlayer.Character:BreakJoints()
+            notify("Summit reset! Respawned at basecamp.")
+        end
+    end)
+
+    -- Server hop button
+    local hopBtn=Instance.new("TextButton")
+    hopBtn.Size=UDim2.new(0,160,0,20)
+    hopBtn.Text="Server Hop"
+    hopBtn.BackgroundColor3=Color3.fromRGB(100,150,250)
+    hopBtn.TextColor3=Color3.fromRGB(255,255,255)
+    hopBtn.Parent=Scroll
+    hopBtn.MouseButton1Click:Connect(serverHop)
 end
 
 -- Init
-CreateCompactUI()
-LocalPlayer.CharacterAdded:Connect(function() wait(1) CreateCompactUI() end)
+CreateUI()
+LocalPlayer.CharacterAdded:Connect(function() wait(1) CreateUI() end)
