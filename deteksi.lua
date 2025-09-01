@@ -1,8 +1,8 @@
--- DETEKSI PIJAK DAN LABEL OBJEK RAPI
+-- DETEKSI DAN LABEL OBJEK MAP (tanpa karakter)
 
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GUI popup
@@ -33,6 +33,51 @@ local function ShowPopup(msg, color)
     end)
 end
 
+-- Fungsi label nama objek map
+local function CreateNameLabel(part)
+    -- Hanya BasePart yang bukan anak karakter
+    if part:FindFirstAncestorOfClass("Model") and part:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid") then return end
+    if part:FindFirstChild("NameLabel") then return end
+    
+    local billboard = Instance.new("BillboardGui", part)
+    billboard.Name = "NameLabel"
+    billboard.Adornee = part
+    billboard.Size = UDim2.new(0,120,0,30)
+    billboard.StudsOffset = Vector3.new(0,part.Size.Y+0.5,0)
+    billboard.AlwaysOnTop = true
+
+    local textLabel = Instance.new("TextLabel", billboard)
+    textLabel.Size = UDim2.new(1,0,1,0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextScaled = true
+    textLabel.Text = part.Name
+
+    -- Warna berdasarkan jenis
+    local lname = part.Name:lower()
+    if lname:find("cp") or lname:find("checkpoint") or lname:find("pos") then
+        textLabel.TextColor3 = Color3.fromRGB(50,200,50)
+    elseif lname:find("summit") or lname:find("puncak") or lname:find("peak") then
+        textLabel.TextColor3 = Color3.fromRGB(220,200,50)
+    else
+        textLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    end
+end
+
+-- Pasang ke semua part map di workspace
+for _,v in pairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") then
+        CreateNameLabel(v)
+    end
+end
+
+-- Update otomatis jika ada part baru
+workspace.DescendantAdded:Connect(function(v)
+    if v:IsA("BasePart") then
+        CreateNameLabel(v)
+    end
+end)
+
 -- Fungsi deteksi pijakan
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
@@ -40,7 +85,7 @@ RunService.RenderStepped:Connect(function()
         local rayOrigin = char.HumanoidRootPart.Position
         local rayDirection = Vector3.new(0,-5,0)
         local raycastParams = RaycastParams.new()
-        raycastParams.FilterDescendantsInstances = {char}
+        raycastParams.FilterDescendantsInstances = {char} -- abaikan karakter
         raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
         local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
         if rayResult and rayResult.Instance then
@@ -54,48 +99,5 @@ RunService.RenderStepped:Connect(function()
                 ShowPopup("👀 Objek: "..part.Name, Color3.fromRGB(255,255,255))
             end
         end
-    end
-end)
-
--- Fungsi label nama objek di dunia
-local function CreateNameLabel(part)
-    if part:FindFirstChild("NameLabel") then return end
-    local billboard = Instance.new("BillboardGui", part)
-    billboard.Name = "NameLabel"
-    billboard.Adornee = part
-    billboard.Size = UDim2.new(0,120,0,30)
-    billboard.StudsOffset = Vector3.new(0,part.Size.Y+0.5,0)
-    billboard.AlwaysOnTop = true
-
-    local textLabel = Instance.new("TextLabel", billboard)
-    textLabel.Size = UDim2.new(1,0,1,0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextColor3 = Color3.new(1,1,1)
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.TextScaled = true
-
-    local lname = part.Name:lower()
-    if lname:find("cp") or lname:find("checkpoint") or lname:find("pos") then
-        textLabel.TextColor3 = Color3.fromRGB(50,200,50)
-    elseif lname:find("summit") or lname:find("puncak") or lname:find("peak") then
-        textLabel.TextColor3 = Color3.fromRGB(220,200,50)
-    else
-        textLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    end
-
-    textLabel.Text = part.Name
-end
-
--- Pasang ke semua part yang ada
-for _,v in pairs(workspace:GetDescendants()) do
-    if v:IsA("BasePart") then
-        CreateNameLabel(v)
-    end
-end
-
--- Update otomatis jika ada part baru muncul
-workspace.DescendantAdded:Connect(function(v)
-    if v:IsA("BasePart") then
-        CreateNameLabel(v)
     end
 end)
