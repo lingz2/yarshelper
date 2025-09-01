@@ -1,169 +1,117 @@
--- Auto Summit CKPTW Ultra Final
--- LocalScript di StarterPlayerScripts
-
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 local LocalPlayer = Players.LocalPlayer
-local TweenTime = 0.5
+local Workspace = game:GetService("Workspace")
 
--- Daftar checkpoint + finis
-local checkpoints = {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","finis"}
-
--- Leaderboard simulasi
-local summitCount = 0
-local checkpointReached = {}
-
--- UI Setup
-local ScreenGui = Instance.new("ScreenGui")
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name = "TeleportUI"
-ScreenGui.Parent = PlayerGui
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 550)
-MainFrame.Position = UDim2.new(0, 10, 0.5, -275)
-MainFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
-MainFrame.Visible = true
-MainFrame.Parent = ScreenGui
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0,250,0,300)
+MainFrame.Position = UDim2.new(0,20,0.5,-150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+MainFrame.BorderSizePixel = 0
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0,5)
-UIListLayout.Parent = MainFrame
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1,0,0,40)
+Title.Text = "Teleport Helper"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextScaled = true
+Title.BackgroundColor3 = Color3.fromRGB(50,50,50)
 
--- Show/Hide UI
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 300, 0, 30)
-ToggleButton.Position = UDim2.new(0,10,0.5,-310)
-ToggleButton.Text = "Hide UI"
-ToggleButton.Parent = ScreenGui
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    ToggleButton.Text = MainFrame.Visible and "Hide UI" or "Show UI"
-end)
+local HideBtn = Instance.new("TextButton", MainFrame)
+HideBtn.Size = UDim2.new(0,40,0,40)
+HideBtn.Position = UDim2.new(1,-40,0,0)
+HideBtn.Text = "-"
+HideBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+HideBtn.TextColor3 = Color3.new(1,1,1)
 
--- Start/Stop Auto Loop
-local AutoLoop = false
-local AutoLoopButton = Instance.new("TextButton")
-AutoLoopButton.Size = UDim2.new(0, 280, 0, 25)
-AutoLoopButton.BackgroundColor3 = Color3.fromRGB(70,120,70)
-AutoLoopButton.TextColor3 = Color3.fromRGB(255,255,255)
-AutoLoopButton.Text = "Start Auto Loop"
-AutoLoopButton.Parent = MainFrame
-AutoLoopButton.MouseButton1Click:Connect(function()
-    AutoLoop = not AutoLoop
-    AutoLoopButton.Text = AutoLoop and "Stop Auto Loop" or "Start Auto Loop"
-end)
+local Scroller = Instance.new("ScrollingFrame", MainFrame)
+Scroller.Size = UDim2.new(1,0,1,-40)
+Scroller.Position = UDim2.new(0,0,0,40)
+Scroller.CanvasSize = UDim2.new(0,0,0,0)
+Scroller.ScrollBarThickness = 6
+Scroller.BackgroundTransparency = 1
 
--- Teleport langsung ke finis
-local TeleportFinisBtn = Instance.new("TextButton")
-TeleportFinisBtn.Size = UDim2.new(0, 280, 0, 25)
-TeleportFinisBtn.BackgroundColor3 = Color3.fromRGB(120,50,50)
-TeleportFinisBtn.TextColor3 = Color3.fromRGB(255,255,255)
-TeleportFinisBtn.Text = "Teleport Langsung ke FINIS"
-TeleportFinisBtn.Parent = MainFrame
-TeleportFinisBtn.MouseButton1Click:Connect(function()
-    local obj = workspace:FindFirstChild("finis")
-    if obj then
-        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-            TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = obj.CFrame + Vector3.new(0,3,0)}):Play()
-            notify("Teleported langsung ke FINIS")
-        end
+-- Hide/Show GUI
+local hidden=false
+HideBtn.MouseButton1Click:Connect(function()
+    hidden = not hidden
+    MainFrame.Visible = not hidden
+    if hidden then
+        HideBtn.Text = "+"
+    else
+        HideBtn.Text = "-"
     end
 end)
 
--- Timer label
-local TimerLabel = Instance.new("TextLabel")
-TimerLabel.Size = UDim2.new(0, 280, 0, 25)
-TimerLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
-TimerLabel.TextColor3 = Color3.fromRGB(255,255,255)
-TimerLabel.Text = "Summit Time: 0s"
-TimerLabel.Parent = MainFrame
+-- Scan checkpoint & summit
+local checkpoints = {}
+local summit = nil
 
-local startTime = 0
-local timerActive = false
-
--- Leaderboard label
-local LeaderLabel = Instance.new("TextLabel")
-LeaderLabel.Size = UDim2.new(0, 280, 0, 25)
-LeaderLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
-LeaderLabel.TextColor3 = Color3.fromRGB(255,255,255)
-LeaderLabel.Text = "Summits: 0 | Checkpoints reached: 0"
-LeaderLabel.Parent = MainFrame
-
--- Fungsi teleport Tween
-local function teleportTo(objName)
-    local obj = workspace:FindFirstChild(objName)
-    if obj and obj:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-        local targetCFrame = obj.CFrame + Vector3.new(0,3,0)
-        local tween = TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
-        tween:Play()
-        tween.Completed:Wait()
+for _,v in pairs(Workspace:GetDescendants()) do
+    if v:IsA("BasePart") then
+        local lname = v.Name:lower()
+        if lname:find("cp") or lname:find("checkpoint") or lname:find("pos") or tonumber(lname) then
+            table.insert(checkpoints,v)
+        elseif lname:find("summit") or lname:find("puncak") then
+            summit = v
+        end
     end
 end
 
--- Fungsi Notifikasi
-function notify(msg)
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "Auto Summit CKPTW",
-        Text = msg,
-        Duration = 2
-    })
+table.sort(checkpoints,function(a,b) return a.Position.Y < b.Position.Y end)
+
+-- Fungsi teleport
+local function TeleportTo(pos)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,5,0))
+        -- Debug popup
+        local popup = Instance.new("TextLabel", ScreenGui)
+        popup.Size = UDim2.new(0,220,0,25)
+        popup.Position = UDim2.new(0,10,0.5,50)
+        popup.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        popup.TextColor3 = Color3.new(1,1,1)
+        popup.Text = "Teleport ke: "..tostring(pos)
+        popup.Font = Enum.Font.SourceSansBold
+        popup.TextScaled = true
+        delay(2,function() popup:Destroy() end)
+    end
 end
 
--- Auto Loop checkpoint by checkpoint
-spawn(function()
-    while true do
-        if AutoLoop then
-            startTime = tick()
-            timerActive = true
-            checkpointReached = {}
-            for _, name in ipairs(checkpoints) do
-                teleportTo(name)
-                notify("Sampai di checkpoint "..name)
-                checkpointReached[name] = true
-                LeaderLabel.Text = "Summits: "..summitCount.." | Checkpoints reached: "..#checkpointReached
-                wait(0.3)
-                -- Auto click puncak
-                if name == "finis" then
-                    if LocalPlayer.Character:FindFirstChild("Humanoid") then
-                        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-                    end
-                    summitCount = summitCount + 1
-                end
-            end
-            teleportTo("1")
-            notify("Kembali ke basecamp")
-            timerActive = false
-        else
-            wait(1)
-        end
-    end
-end)
-
--- Update Timer
-spawn(function()
-    while true do
-        if timerActive then
-            local elapsed = math.floor(tick() - startTime)
-            TimerLabel.Text = "Summit Time: "..elapsed.."s"
-        end
-        wait(0.2)
-    end
-end)
-
--- Tombol teleport manual tiap checkpoint
-for _, name in ipairs(checkpoints) do
+-- Fungsi buat tombol
+local function MakeButton(text,callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 280, 0, 25)
-    btn.Text = "Teleport ke "..name
-    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Parent = MainFrame
-
-    btn.MouseButton1Click:Connect(function()
-        teleportTo(name)
-        notify("Teleported ke "..name)
-        checkpointReached[name] = true
-        LeaderLabel.Text = "Summits: "..summitCount.." | Checkpoints reached: "..#checkpointReached
-    end)
+    btn.Size = UDim2.new(1,-10,0,35)
+    btn.Position = UDim2.new(0,5,0,0)
+    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextScaled = true
+    btn.Text = text
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
+
+-- Generate tombol teleport
+local y=0
+for i,cp in ipairs(checkpoints) do
+    local b = MakeButton("Teleport CP"..i,function()
+        TeleportTo(cp.Position)
+    end)
+    b.Position = UDim2.new(0,5,0,y)
+    b.Parent = Scroller
+    y = y + 40
+end
+
+if summit then
+    local b = MakeButton("Teleport Summit",function()
+        TeleportTo(summit.Position)
+    end)
+    b.Position = UDim2.new(0,5,0,y)
+    b.Parent = Scroller
+end
+
+Scroller.CanvasSize = UDim2.new(0,0,y)
