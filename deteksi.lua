@@ -1,4 +1,4 @@
--- UNIVERSAL GUNUNG: FINAL GABUNGAN
+-- UNIVERSAL GUNUNG FINAL
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -10,14 +10,15 @@ local Workspace = game:GetService("Workspace")
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name = "GunungHelperGUI"
 
--- Popup minimal
+-- Popup besar untuk info
 local PopupLabel = Instance.new("TextLabel", ScreenGui)
-PopupLabel.Size = UDim2.new(0,350,0,35)
-PopupLabel.Position = UDim2.new(0.5,-175,0,50)
+PopupLabel.Size = UDim2.new(0,400,0,100)
+PopupLabel.Position = UDim2.new(0.5,-200,0,50)
 PopupLabel.BackgroundColor3 = Color3.fromRGB(50,150,50)
 PopupLabel.TextColor3 = Color3.new(1,1,1)
 PopupLabel.Font = Enum.Font.SourceSansBold
 PopupLabel.TextScaled = true
+PopupLabel.TextWrapped = true
 PopupLabel.BackgroundTransparency = 0.3
 PopupLabel.Text = ""
 local lastPopup = nil
@@ -35,7 +36,7 @@ local function ShowPopup(msg,color)
     end)
 end
 
--- GUI utama frame
+-- GUI frame
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0,320,0,450)
 MainFrame.Position = UDim2.new(0,20,0.5,-225)
@@ -91,7 +92,7 @@ end
 -- Scan map data
 local checkpoints, summit = {}, nil
 local function ScanMap()
-    checkpoints, summit = {}, nil
+    checkpoints,summit = {},nil
     local mapName = workspace.Name or "Unknown Map"
 
     for _,v in pairs(Workspace:GetDescendants()) do
@@ -104,41 +105,34 @@ local function ScanMap()
             end
         end
     end
-
     table.sort(checkpoints,function(a,b) return a.Position.Y<b.Position.Y end)
 
-    local cpRequired = #checkpoints>0 and "Ya" or "Tidak"
-
-    -- Deteksi admin/dev
+    -- Deteksi admin/dev di server
     local admins = {}
     for _,plr in pairs(Players:GetPlayers()) do
-        if plr:GetRankInGroup(1) > 0 or plr.UserId==LocalPlayer.UserId then
+        if plr:GetRankInGroup(1) > 0 or plr.UserId==123456 then -- ganti 123456 jika developer tertentu
             table.insert(admins,plr.Name)
         end
     end
 
-    -- Deteksi anticheat sederhana
+    -- Anticheat sederhana
     local anticheatDetected = false
     for _,v in pairs(Workspace:GetDescendants()) do
         if v:IsA("Script") or v:IsA("LocalScript") then
-            local code = v:FindFirstChildWhichIsA("StringValue")
-            if code and code.Value:lower():find("anti") then
-                anticheatDetected = true
-            end
+            if v.Name:lower():find("anti") then anticheatDetected=true end
         end
     end
 
-    -- Fitur terlarang
     local bannedFeatures = {}
     if Workspace:FindFirstChild("FlyScript") then table.insert(bannedFeatures,"Fly") end
     if Workspace:FindFirstChild("SpeedScript") then table.insert(bannedFeatures,"Speed") end
 
-    local res = "📌 Map: "..mapName..
-                "\n🏁 Summit via CP?: "..cpRequired..
-                "\n👑 Admin/Dev: "..(#admins>0 and table.concat(admins,", ") or "Tidak ada")..
-                "\n🛡 Anticheat: "..(anticheatDetected and "Ada" or "Tidak ada")..
-                "\n⛔ Fitur terlarang: "..(#bannedFeatures>0 and table.concat(bannedFeatures,", ") or "Tidak ada")
-    ShowPopup(res)
+    local info = "📌 Map: "..mapName..
+                 "\n🏁 Summit via CP?: "..(#checkpoints>0 and "Ya" or "Tidak")..
+                 "\n👑 Admin/Dev di server: "..(#admins>0 and table.concat(admins,", ") or "Tidak ada")..
+                 "\n🛡 Anticheat: "..(anticheatDetected and "Ada" or "Tidak ada")..
+                 "\n⛔ Fitur terlarang: "..(#bannedFeatures>0 and table.concat(bannedFeatures,", ") or "Tidak ada")
+    ShowPopup(info)
 end
 
 -- Tombol scan
@@ -187,12 +181,11 @@ local function GenerateTeleportButtons()
     Scroller.CanvasSize = UDim2.new(0,0,0,y)
 end
 
--- Tombol Generate Teleport
 local generateBtn = MakeButton("🗺 Generate Teleport Buttons",GenerateTeleportButtons)
 generateBtn.Position = UDim2.new(0,5,0,40)
 generateBtn.Parent = Scroller
 
--- Billboard radius dekat
+-- Billboard objek di map saja
 local maxDistance = 25
 local function CreateBillboard(part)
     if part:FindFirstChild("NameBillboard") then return end
@@ -202,36 +195,31 @@ local function CreateBillboard(part)
     billboard.Adornee = part
     billboard.AlwaysOnTop = true
     billboard.Parent = part
-
-    local label = Instance.new("TextLabel", billboard)
+    local label = Instance.new("TextLabel",billboard)
     label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1,1,1)
-    label.TextScaled = true
-    label.Font = Enum.Font.SourceSansBold
-    label.Text = part.Name
-end
-local function RemoveBillboard(part)
-    local b = part:FindFirstChild("NameBillboard")
-    if b then b:Destroy() end
+    label.BackgroundTransparency=1
+    label.TextColor3=Color3.new(1,1,1)
+    label.TextScaled=true
+    label.Font=Enum.Font.SourceSansBold
+    label.Text=part.Name
 end
 
-RunService.RenderStepped:Connect(function()
+-- Deteksi objek dipijak
+RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     for _,part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") and not part:IsDescendantOf(Players) then
-            local dist = (part.Position - hrp.Position).Magnitude
+            local dist = (part.Position-hrp.Position).Magnitude
             if dist <= maxDistance then
                 CreateBillboard(part)
-            else
-                RemoveBillboard(part)
+                local ray = Ray.new(hrp.Position, Vector3.new(0,-3,0))
+                local hit,pos = workspace:FindPartOnRay(ray,char)
+                if hit == part then
+                    ShowPopup("▶️ Dipijak: "..part.Name)
+                end
             end
         end
     end
 end)
-
--- Init scan otomatis saat dijalankan
-ScanMap()
-GenerateTeleportButtons()
