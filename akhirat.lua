@@ -539,4 +539,87 @@ local function createUI()
         isMinimized = not isMinimized
         if isMinimized then
             mainFrame.Size = UDim2.new(0, 400, 0, 40)
-            tabContainer.Visible = fal
+            tabContainer.Visible = false
+            keyContent.Visible = false
+            teleportContent.Visible = false
+            hacksContent.Visible = false
+            minimizeBtn.Text = "□"
+        else
+            mainFrame.Size = UDim2.new(0, 400, 0, 350)
+            tabContainer.Visible = true
+            switchTab(currentTab, tabButtons, contentFrames)
+            minimizeBtn.Text = "−"
+        end
+    end)
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        autoSummitEnabled = false
+        screenGui:Destroy()
+        showNotification("👋 YARS Summit Auto ditutup", Color3.fromRGB(255, 255, 100))
+    end)
+    
+    -- Update counter real-time
+    spawn(function()
+        while summitCounter and summitCounter.Parent do
+            summitCounter.Text = "🏔️ Summit Count: " .. summitCount
+            wait(0.5)
+        end
+    end)
+    
+    -- Dragging
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+        end
+    end)
+    
+    header.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    header.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragging = false
+        end
+    end)
+end
+
+-- Spawn protection (Enhanced)
+local function setupSpawnProtection()
+    player.CharacterAdded:Connect(function(character)
+        if summitCount > 0 and autoSummitEnabled then
+            wait(1)
+            character:WaitForChild("HumanoidRootPart")
+            wait(0.5)
+            character.HumanoidRootPart.CFrame = BASECAMP_POS
+        end
+    end)
+end
+
+-- Initialize
+showNotification("🚀 YARS Summit Auto Loaded!", Color3.fromRGB(100, 255, 100))
+createUI()
+setupSpawnProtection()
+
+-- Auto-update summit count dari leaderstats
+spawn(function()
+    while true do
+        local leaderstats = player:FindFirstChild("leaderstats")
+        if leaderstats then
+            local summitStat = leaderstats:FindFirstChild("Summit") or leaderstats:FindFirstChild("Summits") or leaderstats:FindFirstChild("summit")
+            if summitStat then
+                summitCount = summitStat.Value
+            end
+        end
+        wait(1)
+    end
+end)
