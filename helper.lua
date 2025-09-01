@@ -42,28 +42,43 @@ local mapName = workspace.Name or "Unknown"
 local anticheatDetected, adminDetected = false, false
 local delayPerCP, delaySummit = 2, 5
 local autoLoop = false
+local popupQueue = {}
 
--- Popup
+-- Popup antrian
 local function ShowPopup(msg, success)
-    local popup = Instance.new("TextLabel", ScreenGui)
-    popup.Size = UDim2.new(0,180,0,25)
-    popup.Position = UDim2.new(1,-190,1,-50)
-    popup.BackgroundColor3 = success and Color3.fromRGB(30,60,30) or Color3.fromRGB(60,30,30)
-    popup.TextColor3 = success and Color3.new(0,1,0) or Color3.new(1,0.3,0.3)
-    popup.Text = msg
-    popup.Font = Enum.Font.SourceSansBold
-    popup.TextScaled = true
-    popup.BackgroundTransparency = 0.2
-    popup.ZIndex = 10
-    popup.BackgroundTransparency = 1
-    popup.TextTransparency = 1
-    TweenService:Create(popup,TweenInfo.new(0.5),{BackgroundTransparency=0.2,TextTransparency=0}):Play()
-    delay(3,function()
-        TweenService:Create(popup,TweenInfo.new(0.5),{BackgroundTransparency=1,TextTransparency=1}):Play()
-        wait(0.5)
-        popup:Destroy()
+    table.insert(popupQueue,{msg=msg,success=success})
+end
+
+local function ProcessPopupQueue()
+    spawn(function()
+        while true do
+            if #popupQueue>0 then
+                local p = table.remove(popupQueue,1)
+                local popup = Instance.new("TextLabel", ScreenGui)
+                popup.Size = UDim2.new(0,180,0,25)
+                popup.Position = UDim2.new(1,-190,1,-50)
+                popup.BackgroundColor3 = p.success and Color3.fromRGB(30,60,30) or Color3.fromRGB(60,30,30)
+                popup.TextColor3 = p.success and Color3.new(0,1,0) or Color3.new(1,0.3,0.3)
+                popup.Text = p.msg
+                popup.Font = Enum.Font.SourceSansBold
+                popup.TextScaled = true
+                popup.BackgroundTransparency = 0.2
+                popup.ZIndex = 10
+                popup.BackgroundTransparency = 1
+                popup.TextTransparency = 1
+                TweenService:Create(popup,TweenInfo.new(0.5),{BackgroundTransparency=0.2,TextTransparency=0}):Play()
+                wait(2.5)
+                TweenService:Create(popup,TweenInfo.new(0.5),{BackgroundTransparency=1,TextTransparency=1}):Play()
+                wait(0.5)
+                popup:Destroy()
+            else
+                wait(0.5)
+            end
+        end
     end)
 end
+
+ProcessPopupQueue()
 
 -- Teleport helper
 local function TeleportTo(pos)
@@ -80,12 +95,14 @@ local function ScanMap()
     respawnPoint = nil
     anticheatDetected = false
     adminDetected = false
+    local highestY = -math.huge
+    local summitCandidate = nil
     for _,v in pairs(workspace:GetDescendants()) do
         if v:IsA("Part") then
             local lname = v.Name:lower()
             if lname:find("cp") or lname:find("checkpoint") or lname:find("pos") then
                 table.insert(checkpoints,v)
-            elseif lname:find("summit") or lname:find("puncak") then
+            elseif lname:find("summit") or lname:find("puncak") or lname:find("peak") then
                 summit = v
             elseif lname:find("basecamp") or lname:find("respawn") then
                 respawnPoint = v
@@ -94,9 +111,17 @@ local function ScanMap()
             elseif lname:find("admin") or lname:find("developer") then
                 adminDetected = true
             end
+            -- kandidat summit alternatif jika summit tidak jelas
+            if v.Position.Y>highestY then
+                highestY = v.Position.Y
+                summitCandidate = v
+            end
         end
     end
     table.sort(checkpoints,function(a,b) return a.Position.Y<b.Position.Y end)
+    if not summit then
+        summit = summitCandidate
+    end
 end
 
 -- Generate tombol
@@ -116,7 +141,7 @@ local function GenerateButtons()
         return btn
     end
 
-    -- Info
+    -- Info popup
     ShowPopup("📍 Map: "..mapName,true)
     ShowPopup("🗻 Checkpoints: "..#checkpoints,true)
     ShowPopup("🏔 Summit: "..(summit and summit.Name or "Tidak Ada"),true)
@@ -136,9 +161,9 @@ local function GenerateButtons()
     -- Tombol Summit
     if summit then
         local b = MakeButton("🏔 Summit : "..summit.Name,function()
-            if #checkpoints>0 then
-                TeleportTo(checkpoints[#checkpoints].Position + Vector3.new(0,5,0))
-                wait(0.5)
+            for _,cp in ipairs(checkpoints) do
+                TeleportTo(cp.Position + Vector3.new(0,5,0))
+                wait(delayPerCP + (anticheatDetected and 1.5 or 0))
             end
             TeleportTo(summit.Position + Vector3.new(0,5,0))
         end)
@@ -154,14 +179,14 @@ local function GenerateButtons()
         if autoLoop then
             spawn(function()
                 while autoLoop do
-                    for i,cp in ipairs(checkpoints) do
+                    for _,cp in ipairs(checkpoints) do
                         TeleportTo(cp.Position + Vector3.new(0,5,0))
-                        wait(delayPerCP + (anticheatDetected and 2 or 0))
+                        wait(delayPerCP + (anticheatDetected and 1.5 or 0))
                     end
                     if summit then
                         TeleportTo(summit.Position + Vector3.new(0,5,0))
                         ShowPopup("✅ Summit tercapai!",true)
-                        wait(delaySummit + (anticheatDetected and 2 or 0))
+                        wait(delaySummit + (anticheatDetected and 1.5 or 0))
                         if respawnPoint then
                             LocalPlayer.Character:BreakJoints()
                         else
