@@ -1,4 +1,4 @@
--- Auto Summit CKPTW Ultra Final
+-- Auto Summit CKPTW Ultra Final (Fixed Teleport)
 -- LocalScript di StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -54,6 +54,28 @@ AutoLoopButton.MouseButton1Click:Connect(function()
     AutoLoopButton.Text = AutoLoop and "Stop Auto Loop" or "Start Auto Loop"
 end)
 
+-- Fungsi Notifikasi
+local function notify(msg)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Auto Summit CKPTW",
+        Text = msg,
+        Duration = 2
+    })
+end
+
+-- Fungsi teleport aman
+local function teleportTo(objName)
+    local obj = workspace:FindFirstChild(objName, true) -- cari semua descendant
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if obj and obj:IsA("BasePart") and root then
+        local tween = TweenService:Create(root, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = obj.CFrame + Vector3.new(0,3,0)})
+        tween:Play()
+        tween.Completed:Wait()
+    else
+        notify("Checkpoint "..objName.." tidak ditemukan atau HumanoidRootPart tidak ada")
+    end
+end
+
 -- Teleport langsung ke finis
 local TeleportFinisBtn = Instance.new("TextButton")
 TeleportFinisBtn.Size = UDim2.new(0, 280, 0, 25)
@@ -62,13 +84,8 @@ TeleportFinisBtn.TextColor3 = Color3.fromRGB(255,255,255)
 TeleportFinisBtn.Text = "Teleport Langsung ke FINIS"
 TeleportFinisBtn.Parent = MainFrame
 TeleportFinisBtn.MouseButton1Click:Connect(function()
-    local obj = workspace:FindFirstChild("finis")
-    if obj then
-        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-            TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = obj.CFrame + Vector3.new(0,3,0)}):Play()
-            notify("Teleported langsung ke FINIS")
-        end
-    end
+    teleportTo("finis")
+    notify("Teleported langsung ke FINIS")
 end)
 
 -- Timer label
@@ -90,26 +107,6 @@ LeaderLabel.TextColor3 = Color3.fromRGB(255,255,255)
 LeaderLabel.Text = "Summits: 0 | Checkpoints reached: 0"
 LeaderLabel.Parent = MainFrame
 
--- Fungsi teleport Tween
-local function teleportTo(objName)
-    local obj = workspace:FindFirstChild(objName)
-    if obj and obj:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-        local targetCFrame = obj.CFrame + Vector3.new(0,3,0)
-        local tween = TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(TweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
-        tween:Play()
-        tween.Completed:Wait()
-    end
-end
-
--- Fungsi Notifikasi
-function notify(msg)
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "Auto Summit CKPTW",
-        Text = msg,
-        Duration = 2
-    })
-end
-
 -- Auto Loop checkpoint by checkpoint
 spawn(function()
     while true do
@@ -123,11 +120,7 @@ spawn(function()
                 checkpointReached[name] = true
                 LeaderLabel.Text = "Summits: "..summitCount.." | Checkpoints reached: "..#checkpointReached
                 wait(0.3)
-                -- Auto click puncak
                 if name == "finis" then
-                    if LocalPlayer.Character:FindFirstChild("Humanoid") then
-                        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-                    end
                     summitCount = summitCount + 1
                 end
             end
