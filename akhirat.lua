@@ -115,29 +115,49 @@ local function teleportTo(position, locationName)
     end
 end
 
--- Fungsi force reset player (lebih agresif)
+-- Fungsi klik tombol "Ke Basecamp" (yang bener)
+local function clickBasecampButton()
+    local success = false
+    
+    -- Cari tombol "Ke Basecamp" di semua GUI
+    for _, gui in pairs(playerGui:GetChildren()) do
+        for _, descendant in pairs(gui:GetDescendants()) do
+            if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                local text = descendant.Text:lower()
+                if text:find("ke basecamp") or text:find("basecamp") or text:find("base camp") then
+                    -- Simulate click
+                    for _, connection in pairs(getconnections(descendant.MouseButton1Click)) do
+                        connection:Fire()
+                    end
+                    success = true
+                    showNotification("🏠 Klik tombol Ke Basecamp berhasil!", Color3.fromRGB(255, 215, 0))
+                    break
+                end
+            end
+        end
+        if success then break end
+    end
+    
+    if not success then
+        showNotification("⚠️ Tombol Ke Basecamp tidak ditemukan!", Color3.fromRGB(255, 100, 100))
+    end
+    
+    return success
+end
+
+-- Fungsi force reset player (backup method)
 local function forceReset()
     local character = player.Character
     if character and character:FindFirstChild("Humanoid") then
-        -- Method 1: Reset via Humanoid
         character.Humanoid.Health = 0
-        
-        -- Method 2: Destroy character parts (backup)
-        spawn(function()
-            wait(0.1)
-            if character:FindFirstChild("HumanoidRootPart") then
-                character.HumanoidRootPart:Destroy()
-            end
-        end)
-        
         showNotification("💀 Force reset ke basecamp", Color3.fromRGB(255, 200, 100))
         return true
     end
     return false
 end
 
--- Fungsi deteksi summit (lebih sensitif)
-local function checkSummitReached()
+-- Fungsi deteksi sampai di puncak (berdasarkan posisi saja)
+local function checkArrivedAtSummit()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
     
@@ -145,71 +165,77 @@ local function checkSummitReached()
     local summitPos = SUMMIT_POS.Position
     local distance = (currentPos - summitPos).Magnitude
     
-    -- Deteksi berdasarkan jarak dan ketinggian
+    -- Deteksi berdasarkan jarak dan ketinggian (sampai di puncak)
     if distance <= 25 and currentPos.Y > 7800 then
-        local currentTime = tick()
-        
-        -- Cek leaderstats dulu
-        local leaderstats = player:FindFirstChild("leaderstats")
-        if leaderstats then
-            local summitStat = leaderstats:FindFirstChild("Summit") or leaderstats:FindFirstChild("Summits") or leaderstats:FindFirstChild("summit")
-            if summitStat and summitStat.Value > lastSummitCheck then
-                lastSummitCheck = summitStat.Value
-                summitCount = summitStat.Value
-                showNotification("🏔️ SUMMIT BERHASIL! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
-                return true
-            end
-        end
-        
-        -- Deteksi manual berdasarkan waktu
-        if currentTime - lastSummitCheck > 2 then
-            lastSummitCheck = currentTime
-            summitCount = summitCount + 1
-            showNotification("🏔️ SUMMIT BERHASIL! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
+        return true
+    end
+    return false
+end
+
+-- Fungsi deteksi summit terhitung (dari leaderstats)
+local function checkSummitCounted()
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if leaderstats then
+        local summitStat = leaderstats:FindFirstChild("Summit") or leaderstats:FindFirstChild("Summits") or leaderstats:FindFirstChild("summit")
+        if summitStat and summitStat.Value > lastSummitCheck then
+            lastSummitCheck = summitStat.Value
+            summitCount = summitStat.Value
+            showNotification("🏔️ SUMMIT TERHITUNG! Total: " .. summitCount, Color3.fromRGB(255, 215, 0))
             return true
         end
     end
     return false
 end
 
--- Fungsi Auto Summit (Enhanced)
+-- Fungsi Auto Summit (Diperbaiki dengan tombol Ke Basecamp)
 local function autoSummitLoop()
     spawn(function()
         while autoSummitEnabled do
             -- Step 1: Teleport ke puncak
             if teleportTo(SUMMIT_POS, "Puncak Gunung") then
                 
-                -- Step 2: Tunggu summit terdeteksi (maksimal 5 detik)
+                -- Step 2: Tunggu sampai di puncak (maksimal 5 detik)
                 local startTime = tick()
-                local summitDetected = false
+                local arrivedAtSummit = false
                 
                 while tick() - startTime < 5 and autoSummitEnabled do
-                    if checkSummitReached() then
-                        summitDetected = true
+                    if checkArrivedAtSummit() then
+                        arrivedAtSummit = true
+                        showNotification("✅ Sampai di puncak!", Color3.fromRGB(100, 255, 100))
                         break
                     end
-                    wait(0.2) -- Check setiap 0.2 detik
+                    wait(0.2)
                 end
                 
-                -- Step 3: Langsung reset setelah summit terdeteksi
-                if summitDetected and autoSummitEnabled then
-                    wait(0.5) -- Tunggu sebentar biar summit benar-benar terhitung
-                    forceReset()
+                -- Step 3: Klik tombol "Ke Basecamp" untuk menghitung summit
+                if arrivedAtSummit and autoSummitEnabled then
+                    wait(0.5) -- Tunggu sebentar
                     
-                    -- Tunggu respawn
-                    local respawnStart = tick()
-                    while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and tick() - respawnStart < 10 do
-                        wait(0.1)
+                    local basecampClicked = clickBasecampButton()
+                    
+                    if basecampClicked then
+                        -- Tunggu respawn dan cek apakah summit bertambah
+                        local respawnStart = tick()
+                        while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and tick() - respawnStart < 10 do
+                            wait(0.1)
+                        end
+                        
+                        wait(1) -- Tunggu character fully loaded
+                        
+                        -- Cek apakah summit sudah bertambah
+                        checkSummitCounted()
+                    else
+                        -- Fallback: force reset jika tombol tidak ditemukan
+                        forceReset()
+                        wait(3)
                     end
-                    
-                    wait(0.5) -- Tunggu character fully loaded
                 end
                 
             else
                 wait(1) -- Tunggu sebelum retry jika teleport gagal
             end
             
-            wait(1) -- Cooldown singkat antar loop
+            wait(1) -- Cooldown antar loop
         end
     end)
 end
@@ -437,11 +463,27 @@ local function createUI()
     counterCorner.CornerRadius = UDim.new(0, 6)
     counterCorner.Parent = summitCounter
     
+    -- Teleport ke Basecamp Button (BARU!)
+    local basecampTeleportBtn = Instance.new("TextButton")
+    basecampTeleportBtn.Name = "BasecampTeleportButton"
+    basecampTeleportBtn.Size = UDim2.new(1, 0, 0, 40)
+    basecampTeleportBtn.Position = UDim2.new(0, 0, 0, 60)
+    basecampTeleportBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 255)
+    basecampTeleportBtn.Text = "🏠 TELEPORT KE BASECAMP"
+    basecampTeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    basecampTeleportBtn.TextSize = 14
+    basecampTeleportBtn.Font = Enum.Font.GothamBold
+    basecampTeleportBtn.Parent = teleportContent
+    
+    local basecampTeleportCorner = Instance.new("UICorner")
+    basecampTeleportCorner.CornerRadius = UDim.new(0, 6)
+    basecampTeleportCorner.Parent = basecampTeleportBtn
+    
     -- Teleport ke Puncak Button
     local summitTeleportBtn = Instance.new("TextButton")
     summitTeleportBtn.Name = "SummitTeleportButton"
-    summitTeleportBtn.Size = UDim2.new(1, 0, 0, 45)
-    summitTeleportBtn.Position = UDim2.new(0, 0, 0, 60)
+    summitTeleportBtn.Size = UDim2.new(1, 0, 0, 40)
+    summitTeleportBtn.Position = UDim2.new(0, 0, 0, 110)
     summitTeleportBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
     summitTeleportBtn.Text = "🚀 TELEPORT KE PUNCAK"
     summitTeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -457,7 +499,7 @@ local function createUI()
     local autoSummitBtn = Instance.new("TextButton")
     autoSummitBtn.Name = "AutoSummitButton"
     autoSummitBtn.Size = UDim2.new(1, 0, 0, 45)
-    autoSummitBtn.Position = UDim2.new(0, 0, 0, 115)
+    autoSummitBtn.Position = UDim2.new(0, 0, 0, 160)
     autoSummitBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
     autoSummitBtn.Text = "⚡ AUTO SUMMIT: OFF"
     autoSummitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -473,7 +515,7 @@ local function createUI()
     local hopBtn = Instance.new("TextButton")
     hopBtn.Name = "HopButton"
     hopBtn.Size = UDim2.new(1, 0, 0, 40)
-    hopBtn.Position = UDim2.new(0, 0, 0, 170)
+    hopBtn.Position = UDim2.new(0, 0, 0, 215)
     hopBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
     hopBtn.Text = "🌐 HOP SERVER SEPI"
     hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -509,6 +551,10 @@ local function createUI()
     
     hacksTab.MouseButton1Click:Connect(function()
         switchTab("hacks", tabButtons, contentFrames)
+    end)
+    
+    basecampTeleportBtn.MouseButton1Click:Connect(function()
+        teleportTo(BASECAMP_POS, "Basecamp")
     end)
     
     summitTeleportBtn.MouseButton1Click:Connect(function()
