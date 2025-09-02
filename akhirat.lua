@@ -21,15 +21,18 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
--- Security Scanner
+-- Security Scanner (Enhanced)
 local function scanForStaff()
     local dangerousUsers = {}
     local staffKeywords = {
-        "admin", "developer", "dev", "mod", "moderator", "staff", "owner", 
-        "malaikat", "angel", "creator", "founder", "manager", "support"
+        "admin", "administrator", "developer", "dev", "mod", "moderator", 
+        "staff", "owner", "malaikat", "angel", "creator", "founder", 
+        "manager", "support", "helper", "vip", "premium"
     }
     
-    -- Scan semua player
+    showNotification("Scanning...", "🔍 Checking " .. #Players:GetPlayers() .. " players...")
+    
+    -- Scan semua player di server
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player then
             local username = p.Name:lower()
@@ -38,37 +41,46 @@ local function scanForStaff()
             -- Cek keyword di username atau display name
             for _, keyword in pairs(staffKeywords) do
                 if username:find(keyword) or displayName:find(keyword) then
-                    table.insert(dangerousUsers, p.Name)
+                    table.insert(dangerousUsers, p.Name .. " (" .. p.DisplayName .. ")")
                     break
                 end
             end
             
-            -- Cek group rank (admin biasanya rank tinggi)
-            pcall(function()
-                if p:GetRankInGroup(game.CreatorId) >= 100 then
-                    table.insert(dangerousUsers, p.Name)
+            -- Cek premium status (kadang admin punya premium)
+            if p.MembershipType == Enum.MembershipType.Premium then
+                -- Double check dengan keyword untuk premium user
+                for _, keyword in pairs({"admin", "mod", "staff", "malaikat"}) do
+                    if username:find(keyword) or displayName:find(keyword) then
+                        table.insert(dangerousUsers, p.Name .. " [PREMIUM]")
+                        break
+                    end
                 end
-            end)
+            end
         end
     end
     
     return dangerousUsers
 end
 
--- Security Alert System
+-- Security Alert System (Enhanced)
 local function performSecurityScan()
-    showNotification("Security Scan", "🔍 Scanning for admins, developers & malaikat...")
+    showNotification("Security Check", "🛡️ YARS Security System Activated!")
     
-    wait(2) -- Simulate scanning time
+    wait(1.5) -- Realistic scanning time
     
     local threats = scanForStaff()
     
     if #threats > 0 then
-        local threatList = table.concat(threats, ", ")
-        showNotification("⚠️ DANGER DETECTED!", "Staff found: " .. threatList, 8)
-        showNotification("Security Alert", "⚠️ Recommend: Use Private Server or hop!")
+        showNotification("🚨 SECURITY ALERT!", "Detected: " .. #threats .. " potential staff members", 7)
+        for i, threat in pairs(threats) do
+            if i <= 3 then -- Max 3 notifications to avoid spam
+                showNotification("⚠️ Threat #" .. i, threat, 4)
+            end
+        end
+        showNotification("Recommendation", "🔒 Use Private Server for safer farming!", 6)
     else
-        showNotification("✅ Security Clear", "No admins/staff detected. Safe to farm!")
+        showNotification("✅ ALL CLEAR!", "No suspicious users detected. Safe to farm!")
+        showNotification("Server Status", "👥 " .. #Players:GetPlayers() .. " players - Server looks safe")
     end
 end
 
@@ -489,58 +501,58 @@ local function createUI()
         end
     end)
     
-    -- Dragging System (Universal - works on both normal and minimized)
+    -- Fixed Dragging System 
     local dragging = false
     local dragStart = nil
     local startPos = nil
     
-    local function setupDragging(dragTarget)
-        dragTarget.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    -- Make header draggable
+    local function makeDraggable()
+        header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = mainFrame.Position
+                
+                local connection
+                connection = input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                        connection:Disconnect()
+                    end
+                end)
             end
         end)
         
-        dragTarget.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local delta = input.Position - dragStart
-                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            end
-        end)
-        
-        dragTarget.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
+        header.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                if dragging then
+                    local delta = input.Position - dragStart
+                    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
             end
         end)
     end
     
-    -- Setup dragging on header (always available)
-    setupDragging(header)
-    
-    -- Setup dragging on main frame (backup, jika header tidak bisa di-click)
-    setupDragging(mainFrame)
+    makeDraggable()
 end
 
 -- Initialize dengan Security Scan
-showNotification("YARS", "Summit Auto Loaded! 🚀")
+wait(1)
+showNotification("YARS", "Loading Summit Auto... 🚀")
 createUI()
 
--- Jalankan security scan otomatis
+-- Jalankan security scan otomatis setelah UI load
 spawn(function()
-    wait(1) -- Tunggu UI load
+    wait(2) -- Tunggu UI benar-benar load
     performSecurityScan()
     
-    -- Re-scan setiap 5 menit
+    -- Re-scan setiap 3 menit untuk deteksi staff baru
     while true do
-        wait(300) -- 5 menit
-        if not isMinimized then -- Hanya scan jika UI tidak di-minimize (untuk menghindari spam)
-            local threats = scanForStaff()
-            if #threats > 0 then
-                showNotification("⚠️ Security Alert", "New staff detected: " .. table.concat(threats, ", "))
-            end
+        wait(180) -- 3 menit
+        local threats = scanForStaff()
+               if #threats > 0 then
+            showNotification("⚠️ NEW THREAT", "Staff joined: " .. table.concat(threats, ", "), 5)
         end
     end
 end)
