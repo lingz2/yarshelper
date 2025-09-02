@@ -21,77 +21,148 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
--- Security Scanner (Enhanced)
-local function scanForStaff()
-    local dangerousUsers = {}
-    local staffKeywords = {
-        "admin", "administrator", "developer", "dev", "mod", "moderator", 
-        "staff", "owner", "malaikat", "angel", "creator", "founder", 
-        "manager", "support", "helper", "vip", "premium"
-    }
+-- Security Scanner (dengan Custom Notifications)
+local function performSecurityScan()
+    -- Step 1: Start notification
+    print("=== STARTING SECURITY SCAN ===")
+    showCustomNotification("🔍 Security Scan", "Scanning server for admins/staff...", Color3.fromRGB(100, 150, 255), 3)
     
-    showNotification("Scanning...", "🔍 Checking " .. #Players:GetPlayers() .. " players...")
+    -- Step 2: Get all players
+    local allPlayers = Players:GetPlayers()
+    local staffFound = {}
     
-    -- Scan semua player di server
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            local username = p.Name:lower()
-            local displayName = p.DisplayName:lower()
+    -- Step 3: Check each player
+    for _, player in pairs(allPlayers) do
+        if player ~= Players.LocalPlayer then
+            local name = string.lower(player.Name)
+            local display = string.lower(player.DisplayName)
             
-            -- Cek keyword di username atau display name
-            for _, keyword in pairs(staffKeywords) do
-                if username:find(keyword) or displayName:find(keyword) then
-                    table.insert(dangerousUsers, p.Name .. " (" .. p.DisplayName .. ")")
+            print("Checking: " .. player.Name .. " (" .. player.DisplayName .. ")")
+            
+            -- Simple keyword check
+            local keywords = {"admin", "mod", "staff", "dev", "developer", "malaikat", "angel", "owner", "creator", "moderator"}
+            
+            for _, keyword in pairs(keywords) do
+                if string.find(name, keyword) or string.find(display, keyword) then
+                    table.insert(staffFound, player.Name)
+                    print("🚨 FOUND STAFF: " .. player.Name)
                     break
                 end
             end
-            
-            -- Cek premium status (kadang admin punya premium)
-            if p.MembershipType == Enum.MembershipType.Premium then
-                -- Double check dengan keyword untuk premium user
-                for _, keyword in pairs({"admin", "mod", "staff", "malaikat"}) do
-                    if username:find(keyword) or displayName:find(keyword) then
-                        table.insert(dangerousUsers, p.Name .. " [PREMIUM]")
-                        break
-                    end
-                end
-            end
         end
     end
     
-    return dangerousUsers
-end
-
--- Security Alert System (Enhanced)
-local function performSecurityScan()
-    showNotification("Security Check", "🛡️ YARS Security System Activated!")
+    -- Step 4: Wait for scanning effect
+    wait(2.5)
     
-    wait(1.5) -- Realistic scanning time
+    -- Step 5: Show results dengan custom notification
+    print("=== SCAN COMPLETE ===")
+    print("Staff found: " .. #staffFound)
     
-    local threats = scanForStaff()
-    
-    if #threats > 0 then
-        showNotification("🚨 SECURITY ALERT!", "Detected: " .. #threats .. " potential staff members", 7)
-        for i, threat in pairs(threats) do
-            if i <= 3 then -- Max 3 notifications to avoid spam
-                showNotification("⚠️ Threat #" .. i, threat, 4)
-            end
+    if #staffFound > 0 then
+        -- DANGER - Custom notification
+        showCustomNotification("🚨 DANGER DETECTED!", "Found " .. #staffFound .. " staff members in server", Color3.fromRGB(255, 100, 100), 6)
+        
+        wait(0.5)
+        
+        -- Show staff names
+        local staffList = table.concat(staffFound, ", ")
+        if #staffList > 50 then
+            staffList = string.sub(staffList, 1, 50) .. "..."
         end
-        showNotification("Recommendation", "🔒 Use Private Server for safer farming!", 6)
+        showCustomNotification("⚠️ Staff Found", "Users: " .. staffList, Color3.fromRGB(255, 150, 100), 5)
+        
+        wait(0.5)
+        
+        -- Recommendation
+        showCustomNotification("🔒 Recommendation", "Use Private Server for safer farming!", Color3.fromRGB(255, 200, 100), 4)
+        
     else
-        showNotification("✅ ALL CLEAR!", "No suspicious users detected. Safe to farm!")
-        showNotification("Server Status", "👥 " .. #Players:GetPlayers() .. " players - Server looks safe")
+        -- SAFE - Custom notification
+        showCustomNotification("✅ Server Safe", "No admins/staff detected in server", Color3.fromRGB(100, 255, 100), 5)
+        
+        wait(0.5)
+        
+        -- Server info
+        showCustomNotification("📊 Server Info", #allPlayers .. " players online - Safe to farm summit!", Color3.fromRGB(100, 200, 255), 4)
     end
+    
+    print("=== NOTIFICATIONS SENT ===")
 end
 
--- Fungsi Notifikasi (Default Roblox Style)
+-- Fungsi Notifikasi Custom (Sama seperti teleport notification)
+local function showCustomNotification(title, text, color, duration)
+    local notification = Instance.new("ScreenGui")
+    notification.Name = "YARSCustomNotification"
+    notification.Parent = CoreGui
+    notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 350, 0, 70)
+    frame.Position = UDim2.new(1, -370, 0, 20)
+    frame.BackgroundColor3 = color or Color3.fromRGB(30, 30, 35)
+    frame.BorderSizePixel = 0
+    frame.Parent = notification
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(70, 70, 80)
+    stroke.Thickness = 1
+    stroke.Parent = frame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 25)
+    titleLabel.Position = UDim2.new(0, 10, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = frame
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -20, 0, 35)
+    textLabel.Position = UDim2.new(0, 10, 0, 30)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextWrapped = true
+    textLabel.Parent = frame
+    
+    -- Animation masuk
+    frame.Position = UDim2.new(1, 20, 0, 20)
+    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(1, -370, 0, 20)})
+    tweenIn:Play()
+    
+    -- Auto hilang
+    spawn(function()
+        wait(duration or 4)
+        local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 20, 0, 20)})
+        tweenOut:Play()
+        tweenOut.Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end)
+end
+
+-- Fungsi Notifikasi Roblox Default (untuk teleport success dll)
 local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title or "YARS";
-        Text = text or "";
-        Duration = duration or 3;
-        Icon = "rbxasset://textures/ui/GuiImagePlaceholder.png";
-    })
+    spawn(function()
+        pcall(function()
+            game.StarterGui:SetCore("SendNotification", {
+                Title = title;
+                Text = text;
+                Duration = duration or 3;
+            })
+        end)
+    end)
 end
 
 -- Fungsi Server Hopping ke Private Server (0-1 player)
@@ -140,29 +211,88 @@ local function teleportTo(position, locationName)
     end
 end
 
--- Fungsi klik tombol "Ke Basecamp"
+-- Fungsi klik tombol "Ke Basecamp" (Enhanced Detection)
 local function clickBasecampButton()
     local success = false
     
+    -- Method 1: Cari di semua ScreenGui
     for _, gui in pairs(playerGui:GetChildren()) do
-        for _, descendant in pairs(gui:GetDescendants()) do
-            if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-                local text = descendant.Text:lower()
-                if text:find("ke basecamp") or text:find("basecamp") or text:find("base camp") then
-                    for _, connection in pairs(getconnections(descendant.MouseButton1Click)) do
-                        connection:Fire()
+        if gui:IsA("ScreenGui") then
+            for _, descendant in pairs(gui:GetDescendants()) do
+                if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                    local text = string.lower(descendant.Text)
+                    -- Cek berbagai variasi teks
+                    if string.find(text, "ke basecamp") or string.find(text, "basecamp") or 
+                       string.find(text, "base camp") or string.find(text, "reset") then
+                        
+                        -- Simulate click dengan berbagai method
+                        pcall(function()
+                            -- Method A: FireClick
+                            descendant.MouseButton1Click:Fire()
+                        end)
+                        
+                        pcall(function()
+                            -- Method B: GetConnections
+                            for _, connection in pairs(getconnections(descendant.MouseButton1Click)) do
+                                connection:Fire()
+                            end
+                        end)
+                        
+                        pcall(function()
+                            -- Method C: GuiService
+                            game:GetService("GuiService").SelectedCoreObject = descendant
+                        end)
+                        
+                        success = true
+                        showCustomNotification("✅ Summit Reset", "Clicked 'Ke Basecamp' button successfully!", Color3.fromRGB(100, 255, 100), 3)
+                        print("SUCCESS: Found and clicked Ke Basecamp button: " .. descendant.Name)
+                        break
                     end
-                    success = true
-                    showNotification("Summit", "Klik tombol Ke Basecamp berhasil!")
-                    break
                 end
             end
+            if success then break end
         end
-        if success then break end
+    end
+    
+    -- Method 2: Cari berdasarkan posisi (tombol biasanya di pojok kanan atas)
+    if not success then
+        for _, gui in pairs(playerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                for _, descendant in pairs(gui:GetDescendants()) do
+                    if descendant:IsA("GuiButton") and descendant.Visible then
+                        -- Cek posisi di kanan atas (X > 0.8, Y < 0.3)
+                        if descendant.AbsolutePosition.X > game.Workspace.CurrentCamera.ViewportSize.X * 0.8 and
+                           descendant.AbsolutePosition.Y < game.Workspace.CurrentCamera.ViewportSize.Y * 0.3 then
+                            
+                            pcall(function()
+                                descendant.MouseButton1Click:Fire()
+                                for _, connection in pairs(getconnections(descendant.MouseButton1Click)) do
+                                    connection:Fire()
+                                end
+                            end)
+                            
+                            success = true
+                            showCustomNotification("✅ Position Reset", "Clicked button at top-right position!", Color3.fromRGB(100, 255, 100), 3)
+                            print("SUCCESS: Found button by position: " .. descendant.Name)
+                            break
+                        end
+                    end
+                end
+                if success then break end
+            end
+        end
     end
     
     if not success then
-        showNotification("Warning", "Tombol Ke Basecamp tidak ditemukan!")
+        showCustomNotification("⚠️ Button Not Found", "Could not find 'Ke Basecamp' button", Color3.fromRGB(255, 150, 100), 3)
+        print("ERROR: Ke Basecamp button not found")
+        
+        -- Fallback: Manual reset
+        local character = player.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.Health = 0
+            showCustomNotification("💀 Manual Reset", "Used fallback reset method", Color3.fromRGB(255, 200, 100), 3)
+        end
     end
     
     return success
@@ -195,54 +325,68 @@ local function checkSummitCounted()
     return false
 end
 
--- Fungsi Auto Summit
+-- Fungsi Auto Summit (Enhanced dengan tombol Ke Basecamp)
 local function autoSummitLoop()
     spawn(function()
         while autoSummitEnabled do
+            showCustomNotification("🚀 Auto Summit", "Starting summit cycle...", Color3.fromRGB(100, 200, 255), 2)
+            
             -- Step 1: Teleport ke puncak
             if teleportTo(SUMMIT_POS, "Puncak") then
                 
-                -- Step 2: Tunggu sampai di puncak
+                -- Step 2: Tunggu sampai di puncak (deteksi posisi)
                 local startTime = tick()
                 local arrivedAtSummit = false
                 
-                while tick() - startTime < 5 and autoSummitEnabled do
+                showCustomNotification("⏱️ Waiting", "Waiting to reach summit...", Color3.fromRGB(255, 200, 100), 2)
+                
+                while tick() - startTime < 8 and autoSummitEnabled do
                     if checkArrivedAtSummit() then
                         arrivedAtSummit = true
+                        showCustomNotification("✅ Arrived", "Reached summit position!", Color3.fromRGB(100, 255, 100), 2)
                         break
                     end
-                    wait(0.2)
+                    wait(0.3)
                 end
                 
-                -- Step 3: Klik tombol "Ke Basecamp"
+                -- Step 3: Klik tombol "Ke Basecamp" untuk reset summit
                 if arrivedAtSummit and autoSummitEnabled then
-                    wait(0.5)
+                    wait(1) -- Tunggu sedikit untuk memastikan summit terdaftar
                     
-                    local basecampClicked = clickBasecampButton()
+                    showCustomNotification("🔄 Resetting", "Clicking 'Ke Basecamp' button...", Color3.fromRGB(255, 150, 100), 2)
                     
-                    if basecampClicked then
-                        -- Tunggu respawn
+                    local resetSuccess = clickBasecampButton()
+                    
+                    if resetSuccess then
+                        -- Tunggu respawn di basecamp
                         local respawnStart = tick()
-                        while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and tick() - respawnStart < 10 do
-                            wait(0.1)
+                        while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and tick() - respawnStart < 15 do
+                            wait(0.2)
                         end
                         
-                        wait(1)
+                        wait(1.5) -- Tunggu character fully loaded dan summit terupdate
+                        
+                        -- Cek apakah summit bertambah
                         checkSummitCounted()
+                        
+                        showCustomNotification("🏠 Respawned", "Back to basecamp, checking summit count...", Color3.fromRGB(150, 255, 150), 2)
+                        
                     else
-                        -- Fallback: force reset
-                        if player.Character and player.Character:FindFirstChild("Humanoid") then
-                            player.Character.Humanoid.Health = 0
-                        end
-                        wait(3)
+                        showCustomNotification("⚠️ Reset Failed", "Button not found, trying manual reset...", Color3.fromRGB(255, 100, 100), 3)
+                        wait(3) -- Extra wait untuk manual reset
                     end
                 end
                 
             else
-                wait(1)
+                showCustomNotification("❌ Teleport Failed", "Retrying in 2 seconds...", Color3.fromRGB(255, 100, 100), 2)
+                wait(2)
             end
             
-            wait(1)
+            -- Cooldown antar cycle
+            if autoSummitEnabled then
+                showCustomNotification("⏳ Cooldown", "Next cycle in 2 seconds...", Color3.fromRGB(200, 200, 255), 2)
+                wait(2)
+            end
         end
     end)
 end
@@ -259,11 +403,11 @@ local function createUI()
     screenGui.Parent = playerGui
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Main Frame (Compact)
+    -- Main Frame (Compact) - increased height for new button
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 200, 0, 250)
-    mainFrame.Position = UDim2.new(0, 20, 0.5, -125)
+    mainFrame.Size = UDim2.new(0, 200, 0, 295)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -147)
     mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
@@ -435,9 +579,33 @@ local function createUI()
     hopBtn.Font = Enum.Font.Gotham
     hopBtn.Parent = contentFrame
     
-    local hopCorner = Instance.new("UICorner")
-    hopCorner.CornerRadius = UDim.new(0, 4)
-    hopCorner.Parent = hopBtn
+    -- Manual Security Scan Button
+    local scanBtn = Instance.new("TextButton")
+    scanBtn.Name = "ScanButton"
+    scanBtn.Size = UDim2.new(1, 0, 0, 25)
+    scanBtn.Position = UDim2.new(0, 0, 0, 215)
+    scanBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 255)
+    scanBtn.Text = "🔍 Security Scan"
+    scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    scanBtn.TextSize = 10
+    scanBtn.Font = Enum.Font.Gotham
+    scanBtn.Parent = contentFrame
+    
+    -- Manual Ke Basecamp Button (untuk testing)
+    local manualBasecampBtn = Instance.new("TextButton")
+    manualBasecampBtn.Name = "ManualBasecampButton"
+    manualBasecampBtn.Size = UDim2.new(1, 0, 0, 25)
+    manualBasecampBtn.Position = UDim2.new(0, 0, 0, 240)
+    manualBasecampBtn.BackgroundColor3 = Color3.fromRGB(150, 255, 150)
+    manualBasecampBtn.Text = "🔄 Click Ke Basecamp"
+    manualBasecampBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    manualBasecampBtn.TextSize = 10
+    manualBasecampBtn.Font = Enum.Font.Gotham
+    manualBasecampBtn.Parent = contentFrame
+    
+    local manualBasecampCorner = Instance.new("UICorner")
+    manualBasecampCorner.CornerRadius = UDim.new(0, 4)
+    manualBasecampCorner.Parent = manualBasecampBtn
     
     -- Event Handlers
     basecampBtn.MouseButton1Click:Connect(function()
@@ -480,7 +648,7 @@ local function createUI()
             minimizeBtn.Text = "□"
             title.Text = "YARS (Minimized)"
         else
-            mainFrame.Size = UDim2.new(0, 200, 0, 250)
+            mainFrame.Size = UDim2.new(0, 200, 0, 295)
             contentFrame.Visible = true
             minimizeBtn.Text = "−"
             title.Text = "YARS Summit Auto"
@@ -537,24 +705,17 @@ local function createUI()
     makeDraggable()
 end
 
--- Initialize dengan Security Scan
-wait(1)
-showNotification("YARS", "Loading Summit Auto... 🚀")
+-- Initialize
+print("🚀 YARS SCRIPT STARTING...")
+showNotification("YARS Ready", "Summit Auto Loaded!")
 createUI()
 
--- Jalankan security scan otomatis setelah UI load
+-- Test scan setelah 3 detik
 spawn(function()
-    wait(2) -- Tunggu UI benar-benar load
+    wait(3)
+    print("🔍 RUNNING INITIAL SCAN...")
+    showCustomNotification("Auto Scan", "Running initial security check...", Color3.fromRGB(150, 100, 255), 3)
     performSecurityScan()
-    
-    -- Re-scan setiap 3 menit untuk deteksi staff baru
-    while true do
-        wait(180) -- 3 menit
-        local threats = scanForStaff()
-                if #threats > 0 then
-            showNotification("⚠️ NEW THREAT", "Staff joined: " .. table.concat(threats, ", "), 5)
-        end
-    end
 end)
 
 -- Auto-update summit count
