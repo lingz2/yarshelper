@@ -21,16 +21,14 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
--- Security Scanner (Enhanced)
+-- Security Scanner (Fixed)
 local function scanForStaff()
     local dangerousUsers = {}
     local staffKeywords = {
         "admin", "administrator", "developer", "dev", "mod", "moderator", 
         "staff", "owner", "malaikat", "angel", "creator", "founder", 
-        "manager", "support", "helper", "vip", "premium"
+        "manager", "support", "helper"
     }
-    
-    showNotification("Scanning...", "🔍 Checking " .. #Players:GetPlayers() .. " players...")
     
     -- Scan semua player di server
     for _, p in pairs(Players:GetPlayers()) do
@@ -41,19 +39,8 @@ local function scanForStaff()
             -- Cek keyword di username atau display name
             for _, keyword in pairs(staffKeywords) do
                 if username:find(keyword) or displayName:find(keyword) then
-                    table.insert(dangerousUsers, p.Name .. " (" .. p.DisplayName .. ")")
+                    table.insert(dangerousUsers, p.Name)
                     break
-                end
-            end
-            
-            -- Cek premium status (kadang admin punya premium)
-            if p.MembershipType == Enum.MembershipType.Premium then
-                -- Double check dengan keyword untuk premium user
-                for _, keyword in pairs({"admin", "mod", "staff", "malaikat"}) do
-                    if username:find(keyword) or displayName:find(keyword) then
-                        table.insert(dangerousUsers, p.Name .. " [PREMIUM]")
-                        break
-                    end
                 end
             end
         end
@@ -62,36 +49,33 @@ local function scanForStaff()
     return dangerousUsers
 end
 
--- Security Alert System (Enhanced)
+-- Security Alert System (Fixed)
 local function performSecurityScan()
-    showNotification("Security Check", "🛡️ YARS Security System Activated!")
+    showNotification("YARS Security", "🔍 Scanning " .. #Players:GetPlayers() .. " players...")
     
-    wait(1.5) -- Realistic scanning time
+    wait(2)
     
     local threats = scanForStaff()
     
     if #threats > 0 then
-        showNotification("🚨 SECURITY ALERT!", "Detected: " .. #threats .. " potential staff members", 7)
-        for i, threat in pairs(threats) do
-            if i <= 3 then -- Max 3 notifications to avoid spam
-                showNotification("⚠️ Threat #" .. i, threat, 4)
-            end
-        end
-        showNotification("Recommendation", "🔒 Use Private Server for safer farming!", 6)
+        showNotification("🚨 DANGER!", "Found " .. #threats .. " suspicious users", 5)
+        showNotification("Staff Detected", table.concat(threats, ", "), 6)
+        showNotification("Recommendation", "🔒 Use Private Server!", 4)
     else
-        showNotification("✅ ALL CLEAR!", "No suspicious users detected. Safe to farm!")
-        showNotification("Server Status", "👥 " .. #Players:GetPlayers() .. " players - Server looks safe")
+        showNotification("✅ All Clear", "No staff detected - Safe to farm!")
+        showNotification("Server Info", #Players:GetPlayers() .. " players online", 3)
     end
 end
 
--- Fungsi Notifikasi (Default Roblox Style)
+-- Fungsi Notifikasi (Fixed - konsisten dengan format yang bekerja)
 local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title or "YARS";
-        Text = text or "";
-        Duration = duration or 3;
-        Icon = "rbxasset://textures/ui/GuiImagePlaceholder.png";
-    })
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title or "YARS";
+            Text = text or "";
+            Duration = duration or 3;
+        })
+    end)
 end
 
 -- Fungsi Server Hopping ke Private Server (0-1 player)
@@ -259,11 +243,11 @@ local function createUI()
     screenGui.Parent = playerGui
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Main Frame (Compact)
+    -- Main Frame (Compact) - increased height for new button
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 200, 0, 250)
-    mainFrame.Position = UDim2.new(0, 20, 0.5, -125)
+    mainFrame.Size = UDim2.new(0, 200, 0, 270)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -135)
     mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
@@ -435,9 +419,21 @@ local function createUI()
     hopBtn.Font = Enum.Font.Gotham
     hopBtn.Parent = contentFrame
     
-    local hopCorner = Instance.new("UICorner")
-    hopCorner.CornerRadius = UDim.new(0, 4)
-    hopCorner.Parent = hopBtn
+    -- Manual Security Scan Button
+    local scanBtn = Instance.new("TextButton")
+    scanBtn.Name = "ScanButton"
+    scanBtn.Size = UDim2.new(1, 0, 0, 25)
+    scanBtn.Position = UDim2.new(0, 0, 0, 215)
+    scanBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 255)
+    scanBtn.Text = "🔍 Security Scan"
+    scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    scanBtn.TextSize = 10
+    scanBtn.Font = Enum.Font.Gotham
+    scanBtn.Parent = contentFrame
+    
+    local scanCorner = Instance.new("UICorner")
+    scanCorner.CornerRadius = UDim.new(0, 4)
+    scanCorner.Parent = scanBtn
     
     -- Event Handlers
     basecampBtn.MouseButton1Click:Connect(function()
@@ -480,7 +476,7 @@ local function createUI()
             minimizeBtn.Text = "□"
             title.Text = "YARS (Minimized)"
         else
-            mainFrame.Size = UDim2.new(0, 200, 0, 250)
+            mainFrame.Size = UDim2.new(0, 200, 0, 270)
             contentFrame.Visible = true
             minimizeBtn.Text = "−"
             title.Text = "YARS Summit Auto"
@@ -537,24 +533,21 @@ local function createUI()
     makeDraggable()
 end
 
--- Initialize dengan Security Scan
-wait(1)
-showNotification("YARS", "Loading Summit Auto... 🚀")
+-- Initialize dengan Security Scan (Fixed)
+wait(0.5)
+showNotification("YARS", "Summit Auto Loading... 🚀")
 createUI()
 
--- Jalankan security scan otomatis setelah UI load
+-- Test notification dulu untuk memastikan bekerja
 spawn(function()
-    wait(2) -- Tunggu UI benar-benar load
-    performSecurityScan()
+    wait(1)
+    showNotification("System Test", "Notification system working!")
     
-    -- Re-scan setiap 3 menit untuk deteksi staff baru
-    while true do
-        wait(180) -- 3 menit
-        local threats = scanForStaff()
-               if #threats > 0 then
-            showNotification("⚠️ NEW THREAT", "Staff joined: " .. table.concat(threats, ", "), 5)
-        end
-    end
+    wait(2)
+    -- Jalankan security scan otomatis
+    spawn(function()
+        performSecurityScan()
+    end)
 end)
 
 -- Auto-update summit count
@@ -567,6 +560,6 @@ spawn(function()
                 summitCount = summitStat.Value
             end
         end
-        wait(1)
+            wait(1)
     end
 end)
