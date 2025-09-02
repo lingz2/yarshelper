@@ -21,102 +21,147 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
--- Security Scanner (Completely Fixed)
-local function scanForStaff()
-    local dangerousUsers = {}
-    local staffKeywords = {
-        "admin", "administrator", "developer", "dev", "mod", "moderator", 
-        "staff", "owner", "malaikat", "angel", "creator", "founder", 
-        "manager", "support", "helper", "team", "official"
-    }
+-- Security Scanner (dengan Custom Notifications)
+local function performSecurityScan()
+    -- Step 1: Start notification
+    print("=== STARTING SECURITY SCAN ===")
+    showCustomNotification("🔍 Security Scan", "Scanning server for admins/staff...", Color3.fromRGB(100, 150, 255), 3)
     
-    print("DEBUG: Scanning " .. #Players:GetPlayers() .. " players...")
+    -- Step 2: Get all players
+    local allPlayers = Players:GetPlayers()
+    local staffFound = {}
     
-    -- Scan semua player di server
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            local username = string.lower(p.Name)
-            local displayName = string.lower(p.DisplayName)
+    -- Step 3: Check each player
+    for _, player in pairs(allPlayers) do
+        if player ~= Players.LocalPlayer then
+            local name = string.lower(player.Name)
+            local display = string.lower(player.DisplayName)
             
-            print("DEBUG: Checking player - " .. p.Name .. " (" .. p.DisplayName .. ")")
+            print("Checking: " .. player.Name .. " (" .. player.DisplayName .. ")")
             
-            -- Cek keyword di username atau display name
-            for _, keyword in pairs(staffKeywords) do
-                if string.find(username, keyword) or string.find(displayName, keyword) then
-                    table.insert(dangerousUsers, p.Name)
-                    print("DEBUG: Found suspicious user: " .. p.Name)
+            -- Simple keyword check
+            local keywords = {"admin", "mod", "staff", "dev", "developer", "malaikat", "angel", "owner", "creator", "moderator"}
+            
+            for _, keyword in pairs(keywords) do
+                if string.find(name, keyword) or string.find(display, keyword) then
+                    table.insert(staffFound, player.Name)
+                    print("🚨 FOUND STAFF: " .. player.Name)
                     break
                 end
             end
-            
-            -- Cek account age (staff biasanya account lama)
-            if p.AccountAge > 2000 then -- 5+ years
-                for _, keyword in pairs({"admin", "mod", "staff", "malaikat", "dev"}) do
-                    if string.find(username, keyword) or string.find(displayName, keyword) then
-                        if not table.find(dangerousUsers, p.Name) then
-                            table.insert(dangerousUsers, p.Name .. " [OLD_ACC]")
-                        end
-                        break
-                    end
-                end
-            end
         end
     end
     
-    print("DEBUG: Found " .. #dangerousUsers .. " suspicious users")
-    return dangerousUsers
-end
-
--- Security Alert System (Completely Fixed)
-local function performSecurityScan()
-    -- Step 1: Start notification
-    showNotification("🔍 SCANNING...", "Checking server for admins/staff...")
-    print("DEBUG: Starting security scan...")
+    -- Step 4: Wait for scanning effect
+    wait(2.5)
     
-    -- Step 2: Wait for scan
-    wait(2)
+    -- Step 5: Show results dengan custom notification
+    print("=== SCAN COMPLETE ===")
+    print("Staff found: " .. #staffFound)
     
-    -- Step 3: Get results
-    local threats = scanForStaff()
-    local totalPlayers = #Players:GetPlayers()
-    
-    print("DEBUG: Scan complete. Threats found: " .. #threats)
-    
-    -- Step 4: Show results
-    if #threats > 0 then
-        -- DANGER - Staff detected
-        showNotification("🚨 DANGER DETECTED!", "Found " .. #threats .. " suspicious users!", 6)
+    if #staffFound > 0 then
+        -- DANGER - Custom notification
+        showCustomNotification("🚨 DANGER DETECTED!", "Found " .. #staffFound .. " staff members in server", Color3.fromRGB(255, 100, 100), 6)
         
-        -- Show each threat (max 3 to avoid spam)
-        local maxShow = math.min(#threats, 3)
-        for i = 1, maxShow do
-            showNotification("⚠️ Staff Found", "User: " .. threats[i], 5)
-        end
+        wait(0.5)
         
-        if #threats > 3 then
-            showNotification("More Threats", "+" .. (#threats - 3) .. " more suspicious users", 4)
+        -- Show staff names
+        local staffList = table.concat(staffFound, ", ")
+        if #staffList > 50 then
+            staffList = string.sub(staffList, 1, 50) .. "..."
         end
+        showCustomNotification("⚠️ Staff Found", "Users: " .. staffList, Color3.fromRGB(255, 150, 100), 5)
+        
+        wait(0.5)
         
         -- Recommendation
-        showNotification("🔒 RECOMMENDATION", "Use Private Server or hop!", 5)
+        showCustomNotification("🔒 Recommendation", "Use Private Server for safer farming!", Color3.fromRGB(255, 200, 100), 4)
         
     else
-        -- SAFE - No staff detected
-        showNotification("✅ SERVER SAFE!", "No admins/staff detected", 4)
-        showNotification("Server Info", totalPlayers .. " players online - Safe to farm!", 3)
+        -- SAFE - Custom notification
+        showCustomNotification("✅ Server Safe", "No admins/staff detected in server", Color3.fromRGB(100, 255, 100), 5)
+        
+        wait(0.5)
+        
+        -- Server info
+        showCustomNotification("📊 Server Info", #allPlayers .. " players online - Safe to farm summit!", Color3.fromRGB(100, 200, 255), 4)
     end
     
-    print("DEBUG: Notifications sent")
+    print("=== NOTIFICATIONS SENT ===")
 end
 
--- Fungsi Notifikasi (Fixed - konsisten dengan format yang bekerja)
+-- Fungsi Notifikasi Custom (Sama seperti teleport notification)
+local function showCustomNotification(title, text, color, duration)
+    local notification = Instance.new("ScreenGui")
+    notification.Name = "YARSCustomNotification"
+    notification.Parent = CoreGui
+    notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 350, 0, 70)
+    frame.Position = UDim2.new(1, -370, 0, 20)
+    frame.BackgroundColor3 = color or Color3.fromRGB(30, 30, 35)
+    frame.BorderSizePixel = 0
+    frame.Parent = notification
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(70, 70, 80)
+    stroke.Thickness = 1
+    stroke.Parent = frame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 25)
+    titleLabel.Position = UDim2.new(0, 10, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = frame
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -20, 0, 35)
+    textLabel.Position = UDim2.new(0, 10, 0, 30)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextWrapped = true
+    textLabel.Parent = frame
+    
+    -- Animation masuk
+    frame.Position = UDim2.new(1, 20, 0, 20)
+    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(1, -370, 0, 20)})
+    tweenIn:Play()
+    
+    -- Auto hilang
+    spawn(function()
+        wait(duration or 4)
+        local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 20, 0, 20)})
+        tweenOut:Play()
+        tweenOut.Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end)
+end
+
+-- Fungsi Notifikasi Roblox Default (untuk teleport success dll)
 local function showNotification(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title or "YARS";
-            Text = text or "";
-            Duration = duration or 3;
-        })
+    spawn(function()
+        pcall(function()
+            game.StarterGui:SetCore("SendNotification", {
+                Title = title;
+                Text = text;
+                Duration = duration or 3;
+            })
+        end)
     end)
 end
 
@@ -550,7 +595,7 @@ local function createUI()
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
-                    startPos = mainFrame.Position
+                startPos = mainFrame.Position
                 
                 local connection
                 connection = input.Changed:Connect(function()
@@ -575,14 +620,18 @@ local function createUI()
     makeDraggable()
 end
 
--- Initialize dengan Security Scan (Simplified)
-showNotification("YARS Loaded", "Summit Auto Ready! 🚀")
+-- Initialize (Simple Test)
+print("🚀 YARS SCRIPT STARTING...")
+showNotification("YARS Ready", "Summit Auto Loaded!")
+forceNotification("🚀 YARS Summit Auto Ready!")
+
 createUI()
 
--- Auto scan saat script load
+-- Test scan setelah 3 detik
 spawn(function()
-    wait(2) -- Tunggu UI load
-    showNotification("Auto Scan", "Running initial security check...")
+    wait(3)
+    print("🔍 RUNNING INITIAL SCAN...")
+    forceNotification("🔍 Running initial security scan...")
     performSecurityScan()
 end)
 
