@@ -21,6 +21,57 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
+-- Security Scanner
+local function scanForStaff()
+    local dangerousUsers = {}
+    local staffKeywords = {
+        "admin", "developer", "dev", "mod", "moderator", "staff", "owner", 
+        "malaikat", "angel", "creator", "founder", "manager", "support"
+    }
+    
+    -- Scan semua player
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player then
+            local username = p.Name:lower()
+            local displayName = p.DisplayName:lower()
+            
+            -- Cek keyword di username atau display name
+            for _, keyword in pairs(staffKeywords) do
+                if username:find(keyword) or displayName:find(keyword) then
+                    table.insert(dangerousUsers, p.Name)
+                    break
+                end
+            end
+            
+            -- Cek group rank (admin biasanya rank tinggi)
+            pcall(function()
+                if p:GetRankInGroup(game.CreatorId) >= 100 then
+                    table.insert(dangerousUsers, p.Name)
+                end
+            end)
+        end
+    end
+    
+    return dangerousUsers
+end
+
+-- Security Alert System
+local function performSecurityScan()
+    showNotification("Security Scan", "🔍 Scanning for admins, developers & malaikat...")
+    
+    wait(2) -- Simulate scanning time
+    
+    local threats = scanForStaff()
+    
+    if #threats > 0 then
+        local threatList = table.concat(threats, ", ")
+        showNotification("⚠️ DANGER DETECTED!", "Staff found: " .. threatList, 8)
+        showNotification("Security Alert", "⚠️ Recommend: Use Private Server or hop!")
+    else
+        showNotification("✅ Security Clear", "No admins/staff detected. Safe to farm!")
+    end
+end
+
 -- Fungsi Notifikasi (Default Roblox Style)
 local function showNotification(title, text, duration)
     StarterGui:SetCore("SendNotification", {
@@ -415,10 +466,12 @@ local function createUI()
             mainFrame.Size = UDim2.new(0, 200, 0, 30)
             contentFrame.Visible = false
             minimizeBtn.Text = "□"
+            title.Text = "YARS (Minimized)"
         else
             mainFrame.Size = UDim2.new(0, 200, 0, 250)
             contentFrame.Visible = true
             minimizeBtn.Text = "−"
+            title.Text = "YARS Summit Auto"
         end
     end)
     
@@ -436,36 +489,61 @@ local function createUI()
         end
     end)
     
-    -- Dragging (bisa di drag saat minimize atau maximize)
+    -- Dragging System (Universal - works on both normal and minimized)
     local dragging = false
     local dragStart = nil
     local startPos = nil
     
-    header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-        end
-    end)
+    local function setupDragging(dragTarget)
+        dragTarget.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = mainFrame.Position
+            end
+        end)
+        
+        dragTarget.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input.Position - dragStart
+                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+        
+        dragTarget.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+    end
     
-    header.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+    -- Setup dragging on header (always available)
+    setupDragging(header)
     
-    header.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
+    -- Setup dragging on main frame (backup, jika header tidak bisa di-click)
+    setupDragging(mainFrame)
 end
 
--- Initialize
+-- Initialize dengan Security Scan
 showNotification("YARS", "Summit Auto Loaded! 🚀")
 createUI()
+
+-- Jalankan security scan otomatis
+spawn(function()
+    wait(1) -- Tunggu UI load
+    performSecurityScan()
+    
+    -- Re-scan setiap 5 menit
+    while true do
+        wait(300) -- 5 menit
+        if not isMinimized then -- Hanya scan jika UI tidak di-minimize (untuk menghindari spam)
+            local threats = scanForStaff()
+            if #threats > 0 then
+                showNotification("⚠️ Security Alert", "New staff detected: " .. table.concat(threats, ", "))
+            end
+        end
+    end
+end)
 
 -- Auto-update summit count
 spawn(function()
