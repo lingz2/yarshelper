@@ -1,5 +1,5 @@
--- YARS Summit Auto + Scan Combo FINAL POLISHED
--- Auto Summit + Respawn + Scan + Safe Server + Speed Control
+-- YARS Summit Auto + Scan Combo FIXED
+-- Dengan Auto Summit jalan, UI bisa drag, tombol bisa scroll
 -- By Yars
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Koordinat (ubah sesuai map)
+-- Koordinat
 local SUMMIT_POS = CFrame.new(3041.74048, 7876.99756, 1037.59253)
 local BASECAMP_POS = CFrame.new(-243.999069, 120.998016, 202.997528)
 
@@ -22,12 +22,12 @@ local ReturnToSpawn = game.ReplicatedStorage:WaitForChild("ReturnToSpawn")
 
 -- Vars
 local autoSummitEnabled = false
+local autoLoopThread = nil
 local loopDelay = 1.5
 local riskyTags = {"malaikat","staff","admin","developer","dev","owner"}
 local staffList = {"NamaAdminAsli","NamaDevAsli"} -- opsional
-local isMinimized = false
 
--- Notifikasi custom (background gelap transparan)
+-- Notifikasi
 local function showCustomNotification(title, text, color, duration)
     local gui = Instance.new("ScreenGui", CoreGui)
     gui.Name = "YARSNotif"
@@ -36,7 +36,6 @@ local function showCustomNotification(title, text, color, duration)
     frame.Position = UDim2.new(1, 20, 0, 20)
     frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     frame.BackgroundTransparency = 0.2
-    frame.Parent = gui
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,6)
 
     local t1 = Instance.new("TextLabel", frame)
@@ -86,9 +85,12 @@ local function resetSummit()
     end)
 end
 
--- Auto Summit
-local function autoSummitLoop()
-    task.spawn(function()
+-- Auto Summit Loop
+local function startAutoSummit()
+    if autoLoopThread then
+        task.cancel(autoLoopThread)
+    end
+    autoLoopThread = task.spawn(function()
         while autoSummitEnabled do
             if teleportTo(SUMMIT_POS) then
                 task.wait(0.5)
@@ -102,7 +104,7 @@ local function autoSummitLoop()
     end)
 end
 
--- 🔍 Scan Server
+-- Scan Server
 local function scanServer()
     local players = Players:GetPlayers()
     local detected = {}
@@ -127,7 +129,7 @@ local function scanServer()
     end
 end
 
--- 🚨 Auto detect join
+-- Auto warning join
 Players.PlayerAdded:Connect(function(p)
     local uname = string.lower(p.Name)
     local dname = string.lower(p.DisplayName)
@@ -143,7 +145,7 @@ Players.PlayerAdded:Connect(function(p)
     end
 end)
 
--- 🔒 Join server sepi
+-- Join server sepi
 local function joinLowServer()
     local placeId = game.PlaceId
     local url = "https://games.roblox.com/v1/games/"..placeId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -176,19 +178,33 @@ local function createUI()
     Instance.new("UICorner",frame).CornerRadius=UDim.new(0,8)
 
     -- Drag
-    local dragging,dragStart,startPos
+    local dragging=false local dragInput,dragStart,startPos
     frame.InputBegan:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then
             dragging=true dragStart=input.Position startPos=frame.Position
-            input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then dragging=false end end)
+        end
+    end)
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.MouseButton1 then
+            dragging=false
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
+        if input.UserInputType==Enum.UserInputType.MouseMovement and dragging then
             local delta=input.Position-dragStart
             frame.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
         end
     end)
+
+    -- Scroll area
+    local scroll = Instance.new("ScrollingFrame", frame)
+    scroll.Size = UDim2.new(1,0,1,-30)
+    scroll.Position = UDim2.new(0,0,0,30)
+    scroll.CanvasSize = UDim2.new(0,0,0,500)
+    scroll.ScrollBarThickness = 6
+    scroll.BackgroundTransparency=1
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.Padding = UDim.new(0,5)
 
     -- Header
     local header=Instance.new("Frame",frame)
@@ -213,71 +229,53 @@ local function createUI()
     close.Text="✕"
     close.MouseButton1Click:Connect(function()
         autoSummitEnabled=false gui:Destroy()
-        showCustomNotification("YARS","Script Closed",Color3.fromRGB(200,200,200),2)
     end)
 
-    local minimize=Instance.new("TextButton",header)
-    minimize.Size=UDim2.new(0,25,0,25)
-    minimize.Position=UDim2.new(1,-60,0,2.5)
-    minimize.BackgroundColor3=Color3.fromRGB(100,200,255)
-    minimize.Text="-"
-    minimize.MouseButton1Click:Connect(function()
-        isMinimized=not isMinimized
-        frame.Size=isMinimized and UDim2.new(0,230,0,30) or UDim2.new(0,230,0,380)
-    end)
-
-    -- Tombol
-    local function makeBtn(text,y,color,callback)
-        local btn=Instance.new("TextButton",frame)
+    -- Tombol generator
+    local function makeBtn(text,color,callback)
+        local btn=Instance.new("TextButton",scroll)
         btn.Size=UDim2.new(1,-20,0,30)
-        btn.Position=UDim2.new(0,10,0,y)
         btn.BackgroundColor3=color
         btn.Text=text btn.TextColor3=Color3.fromRGB(0,0,0)
         btn.MouseButton1Click:Connect(callback)
         return btn
     end
 
-    makeBtn("🏠 Basecamp",40,Color3.fromRGB(150,150,255),function() teleportTo(BASECAMP_POS) end)
-    makeBtn("🚀 Puncak",80,Color3.fromRGB(255,150,100),function() teleportTo(SUMMIT_POS) end)
-    makeBtn("🔄 Respawn (Remote)",120,Color3.fromRGB(255,200,150),function() resetSummit() end)
+    makeBtn("🏠 Basecamp",Color3.fromRGB(150,150,255),function() teleportTo(BASECAMP_POS) end)
+    makeBtn("🚀 Puncak",Color3.fromRGB(255,150,100),function() teleportTo(SUMMIT_POS) end)
+    makeBtn("🔄 Respawn (Remote)",Color3.fromRGB(255,200,150),function() resetSummit() end)
 
-    local autoBtn=makeBtn("⚡ AUTO: OFF",160,Color3.fromRGB(100,255,100),function()
+    local autoBtn=makeBtn("⚡ AUTO: OFF",Color3.fromRGB(100,255,100),function()
         autoSummitEnabled=not autoSummitEnabled
-        if autoSummitEnabled then autoBtn.Text="⚡ AUTO: ON" autoBtn.BackgroundColor3=Color3.fromRGB(255,100,100) autoSummitLoop()
-        else autoBtn.Text="⚡ AUTO: OFF" autoBtn.BackgroundColor3=Color3.fromRGB(100,255,100) end
+        if autoSummitEnabled then
+            autoBtn.Text="⚡ AUTO: ON"
+            autoBtn.BackgroundColor3=Color3.fromRGB(255,100,100)
+            startAutoSummit()
+        else
+            autoBtn.Text="⚡ AUTO: OFF"
+            autoBtn.BackgroundColor3=Color3.fromRGB(100,255,100)
+        end
     end)
 
-    makeBtn("🔍 Scan Server",200,Color3.fromRGB(255,255,100),function() scanServer() end)
-    makeBtn("🔒 Join Server Sepi",240,Color3.fromRGB(100,255,255),function() joinLowServer() end)
+    makeBtn("🔍 Scan Server",Color3.fromRGB(255,255,100),function() scanServer() end)
+    makeBtn("🔒 Join Server Sepi",Color3.fromRGB(100,255,255),function() joinLowServer() end)
 
-    -- Speed Control
-    local speedLabel=Instance.new("TextLabel",frame)
+    -- Speed control
+    local speedLabel=Instance.new("TextLabel",scroll)
     speedLabel.Size=UDim2.new(1,-20,0,20)
-    speedLabel.Position=UDim2.new(0,10,0,285)
     speedLabel.BackgroundTransparency=1
     speedLabel.Text="⏱️ Delay: "..loopDelay.."s"
     speedLabel.TextColor3=Color3.fromRGB(255,255,255)
     speedLabel.Font=Enum.Font.Gotham
     speedLabel.TextSize=12
 
-    local plusBtn=makeBtn("+ Delay",310,Color3.fromRGB(100,200,255),function()
-        if loopDelay < 5 then
-            loopDelay=loopDelay+0.5
-            speedLabel.Text="⏱️ Delay: "..loopDelay.."s"
-        end
+    makeBtn("+ Delay",Color3.fromRGB(100,200,255),function()
+        if loopDelay < 5 then loopDelay=loopDelay+0.5 speedLabel.Text="⏱️ Delay: "..loopDelay.."s" end
     end)
-    plusBtn.Size=UDim2.new(0.5,-15,0,25)
-
-    local minusBtn=makeBtn("- Delay",310,Color3.fromRGB(255,150,150),function()
-        if loopDelay > 0.5 then
-            loopDelay=loopDelay-0.5
-            speedLabel.Text="⏱️ Delay: "..loopDelay.."s"
-        end
+    makeBtn("- Delay",Color3.fromRGB(255,150,150),function()
+        if loopDelay > 0.5 then loopDelay=loopDelay-0.5 speedLabel.Text="⏱️ Delay: "..loopDelay.."s" end
     end)
-    minusBtn.Size=UDim2.new(0.5,-15,0,25)
-    minusBtn.Position=UDim2.new(0.5,5,0,310)
 end
 
--- Start
 showCustomNotification("YARS Ready","Summit Auto + Scan Loaded!",Color3.fromRGB(200,200,255),3)
 createUI()
