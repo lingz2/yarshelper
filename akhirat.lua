@@ -21,50 +21,92 @@ local summitCount = 0
 local lastSummitCheck = 0
 local isMinimized = false
 
--- Security Scanner (Fixed)
+-- Security Scanner (Completely Fixed)
 local function scanForStaff()
     local dangerousUsers = {}
     local staffKeywords = {
         "admin", "administrator", "developer", "dev", "mod", "moderator", 
         "staff", "owner", "malaikat", "angel", "creator", "founder", 
-        "manager", "support", "helper"
+        "manager", "support", "helper", "team", "official"
     }
+    
+    print("DEBUG: Scanning " .. #Players:GetPlayers() .. " players...")
     
     -- Scan semua player di server
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player then
-            local username = p.Name:lower()
-            local displayName = p.DisplayName:lower()
+            local username = string.lower(p.Name)
+            local displayName = string.lower(p.DisplayName)
+            
+            print("DEBUG: Checking player - " .. p.Name .. " (" .. p.DisplayName .. ")")
             
             -- Cek keyword di username atau display name
             for _, keyword in pairs(staffKeywords) do
-                if username:find(keyword) or displayName:find(keyword) then
+                if string.find(username, keyword) or string.find(displayName, keyword) then
                     table.insert(dangerousUsers, p.Name)
+                    print("DEBUG: Found suspicious user: " .. p.Name)
                     break
+                end
+            end
+            
+            -- Cek account age (staff biasanya account lama)
+            if p.AccountAge > 2000 then -- 5+ years
+                for _, keyword in pairs({"admin", "mod", "staff", "malaikat", "dev"}) do
+                    if string.find(username, keyword) or string.find(displayName, keyword) then
+                        if not table.find(dangerousUsers, p.Name) then
+                            table.insert(dangerousUsers, p.Name .. " [OLD_ACC]")
+                        end
+                        break
+                    end
                 end
             end
         end
     end
     
+    print("DEBUG: Found " .. #dangerousUsers .. " suspicious users")
     return dangerousUsers
 end
 
--- Security Alert System (Fixed)
+-- Security Alert System (Completely Fixed)
 local function performSecurityScan()
-    showNotification("YARS Security", "🔍 Scanning " .. #Players:GetPlayers() .. " players...")
+    -- Step 1: Start notification
+    showNotification("🔍 SCANNING...", "Checking server for admins/staff...")
+    print("DEBUG: Starting security scan...")
     
+    -- Step 2: Wait for scan
     wait(2)
     
+    -- Step 3: Get results
     local threats = scanForStaff()
+    local totalPlayers = #Players:GetPlayers()
     
+    print("DEBUG: Scan complete. Threats found: " .. #threats)
+    
+    -- Step 4: Show results
     if #threats > 0 then
-        showNotification("🚨 DANGER!", "Found " .. #threats .. " suspicious users", 5)
-        showNotification("Staff Detected", table.concat(threats, ", "), 6)
-        showNotification("Recommendation", "🔒 Use Private Server!", 4)
+        -- DANGER - Staff detected
+        showNotification("🚨 DANGER DETECTED!", "Found " .. #threats .. " suspicious users!", 6)
+        
+        -- Show each threat (max 3 to avoid spam)
+        local maxShow = math.min(#threats, 3)
+        for i = 1, maxShow do
+            showNotification("⚠️ Staff Found", "User: " .. threats[i], 5)
+        end
+        
+        if #threats > 3 then
+            showNotification("More Threats", "+" .. (#threats - 3) .. " more suspicious users", 4)
+        end
+        
+        -- Recommendation
+        showNotification("🔒 RECOMMENDATION", "Use Private Server or hop!", 5)
+        
     else
-        showNotification("✅ All Clear", "No staff detected - Safe to farm!")
-        showNotification("Server Info", #Players:GetPlayers() .. " players online", 3)
+        -- SAFE - No staff detected
+        showNotification("✅ SERVER SAFE!", "No admins/staff detected", 4)
+        showNotification("Server Info", totalPlayers .. " players online - Safe to farm!", 3)
     end
+    
+    print("DEBUG: Notifications sent")
 end
 
 -- Fungsi Notifikasi (Fixed - konsisten dengan format yang bekerja)
@@ -508,7 +550,7 @@ local function createUI()
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
-                startPos = mainFrame.Position
+                    startPos = mainFrame.Position
                 
                 local connection
                 connection = input.Changed:Connect(function()
@@ -533,21 +575,15 @@ local function createUI()
     makeDraggable()
 end
 
--- Initialize dengan Security Scan (Fixed)
-wait(0.5)
-showNotification("YARS", "Summit Auto Loading... 🚀")
+-- Initialize dengan Security Scan (Simplified)
+showNotification("YARS Loaded", "Summit Auto Ready! 🚀")
 createUI()
 
--- Test notification dulu untuk memastikan bekerja
+-- Auto scan saat script load
 spawn(function()
-    wait(1)
-    showNotification("System Test", "Notification system working!")
-    
-    wait(2)
-    -- Jalankan security scan otomatis
-    spawn(function()
-        performSecurityScan()
-    end)
+    wait(2) -- Tunggu UI load
+    showNotification("Auto Scan", "Running initial security check...")
+    performSecurityScan()
 end)
 
 -- Auto-update summit count
@@ -560,6 +596,6 @@ spawn(function()
                 summitCount = summitStat.Value
             end
         end
-            wait(1)
+        wait(1)
     end
 end)
