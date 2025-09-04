@@ -1,6 +1,5 @@
--- YARS Summit Auto Script - FINAL + CP CONTROL + SMART AUTO
--- Auto Summit per Checkpoint (cek leaderstats) + Manual Teleport CP
--- Delay control 0.1s - 1.0s
+-- YARS Summit Auto Script - FINAL + CP CONTROL + SMART AUTO + RESET SUMMIT
+-- Auto Summit Loop (cek checkpoint tercatat) + Manual Teleport CP + Reset Summit
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -14,7 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- Koordinat CP & Summit
 local checkpoints = {
-    -- CP1 Diperbarui:
+    -- CP1 (diperbarui sesuai tracking)
     CFrame.new(-134.886337, 419.735596, -220.92305),
 
     CFrame.new(3.00000501, 948.160339, -1054.29395),
@@ -49,7 +48,6 @@ local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 -- Vars
 local autoSummitEnabled = false
 local loopDelay = 0.3
-local isMinimized = false
 
 -- Custom Notification
 local function showCustomNotification(title, text, color, duration)
@@ -68,8 +66,8 @@ local function showCustomNotification(title, text, color, duration)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
     local titleLabel = Instance.new("TextLabel", frame)
-    titleLabel.Size = UDim2.new(1, -20, 0, 20)
-    titleLabel.Position = UDim2.new(0, 10, 0, 5)
+    titleLabel.Size = UDim2.new(1,-20,0,20)
+    titleLabel.Position = UDim2.new(0,10,0,5)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title
     titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -78,8 +76,8 @@ local function showCustomNotification(title, text, color, duration)
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     
     local textLabel = Instance.new("TextLabel", frame)
-    textLabel.Size = UDim2.new(1, -20, 0, 30)
-    textLabel.Position = UDim2.new(0, 10, 0, 25)
+    textLabel.Size = UDim2.new(1,-20,0,30)
+    textLabel.Position = UDim2.new(0,10,0,25)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = text
     textLabel.TextColor3 = Color3.fromRGB(220,220,220)
@@ -99,23 +97,11 @@ local function showCustomNotification(title, text, color, duration)
     end)
 end
 
--- Notification bawaan
-local function showNotification(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title;
-            Text = text;
-            Duration = duration or 3;
-        })
-    end)
-end
-
 -- Teleport
 local function teleportTo(cf, name)
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         char.HumanoidRootPart.CFrame = cf
-        showNotification("Teleport", "Ke "..name)
         return true
     end
     return false
@@ -139,6 +125,7 @@ local function autoSummitLoop()
             for i, cf in ipairs(checkpoints) do
                 if not autoSummitEnabled then break end
 
+                -- tunggu sampai checkpoint tercatat
                 repeat
                     teleportTo(cf, (i == #checkpoints) and "Summit" or ("CP"..i))
                     wait(loopDelay)
@@ -148,7 +135,7 @@ local function autoSummitLoop()
             if autoSummitEnabled then
                 wait(0.2)
                 resetSummit()
-                showCustomNotification("✅ Summit", "Satu putaran selesai!", Color3.fromRGB(100,255,100), 3)
+                showCustomNotification("✅ Summit", "Putaran selesai → Reset → Ulangi", Color3.fromRGB(100,255,100), 3)
                 wait(loopDelay)
             end
         end
@@ -166,8 +153,8 @@ local function createUI()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0,220,0,330)
-    frame.Position = UDim2.new(0,20,0.5,-165)
+    frame.Size = UDim2.new(0,220,0,370)
+    frame.Position = UDim2.new(0,20,0.5,-185)
     frame.BackgroundColor3 = Color3.fromRGB(35,35,40)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
     
@@ -187,7 +174,6 @@ local function createUI()
     title.TextSize = 12
     title.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Close
     local close = Instance.new("TextButton", header)
     close.Size = UDim2.new(0,25,0,25)
     close.Position = UDim2.new(1,-30,0,2.5)
@@ -199,10 +185,9 @@ local function createUI()
     close.MouseButton1Click:Connect(function()
         autoSummitEnabled = false
         gui:Destroy()
-        showNotification("YARS", "Script Closed")
     end)
     
-    -- Tombol Basecamp
+    -- Basecamp Button
     local baseBtn = Instance.new("TextButton", frame)
     baseBtn.Size = UDim2.new(1,-20,0,30)
     baseBtn.Position = UDim2.new(0,10,0,40)
@@ -212,11 +197,22 @@ local function createUI()
     baseBtn.MouseButton1Click:Connect(function()
         teleportTo(BASECAMP_POS, "Basecamp")
     end)
+
+    -- Reset Summit Button
+    local resetBtn = Instance.new("TextButton", frame)
+    resetBtn.Size = UDim2.new(1,-20,0,30)
+    resetBtn.Position = UDim2.new(0,10,0,75)
+    resetBtn.BackgroundColor3 = Color3.fromRGB(255,200,100)
+    resetBtn.Text = "🔄 Reset Summit"
+    resetBtn.TextColor3 = Color3.fromRGB(0,0,0)
+    resetBtn.MouseButton1Click:Connect(function()
+        resetSummit()
+    end)
     
     -- Auto Summit Toggle
     local autoBtn = Instance.new("TextButton", frame)
     autoBtn.Size = UDim2.new(1,-20,0,35)
-    autoBtn.Position = UDim2.new(0,10,0,80)
+    autoBtn.Position = UDim2.new(0,10,0,115)
     autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
     autoBtn.Text = "⚡ AUTO: OFF"
     autoBtn.TextColor3 = Color3.fromRGB(0,0,0)
@@ -227,55 +223,17 @@ local function createUI()
         if autoSummitEnabled then
             autoBtn.Text = "⚡ AUTO: ON"
             autoBtn.BackgroundColor3 = Color3.fromRGB(255,100,100)
-            autoBtn.TextColor3 = Color3.fromRGB(255,255,255)
             autoSummitLoop()
         else
             autoBtn.Text = "⚡ AUTO: OFF"
             autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
-            autoBtn.TextColor3 = Color3.fromRGB(0,0,0)
         end
     end)
     
-    -- Speed Control
-    local speedLabel = Instance.new("TextLabel", frame)
-    speedLabel.Size = UDim2.new(1,-20,0,20)
-    speedLabel.Position = UDim2.new(0,10,0,125)
-    speedLabel.BackgroundTransparency = 1
-    speedLabel.Text = "⏱️ Delay: "..loopDelay.."s"
-    speedLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    speedLabel.TextSize = 12
-    speedLabel.Font = Enum.Font.Gotham
-    
-    local plusBtn = Instance.new("TextButton", frame)
-    plusBtn.Size = UDim2.new(0.5,-15,0,25)
-    plusBtn.Position = UDim2.new(0,10,0,150)
-    plusBtn.BackgroundColor3 = Color3.fromRGB(100,200,255)
-    plusBtn.Text = "+ Delay"
-    plusBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    plusBtn.MouseButton1Click:Connect(function()
-        if loopDelay < 1.0 then
-            loopDelay = math.floor((loopDelay + 0.1)*10)/10
-            speedLabel.Text = "⏱️ Delay: "..loopDelay.."s"
-        end
-    end)
-    
-    local minusBtn = Instance.new("TextButton", frame)
-    minusBtn.Size = UDim2.new(0.5,-15,0,25)
-    minusBtn.Position = UDim2.new(0.5,5,0,150)
-    minusBtn.BackgroundColor3 = Color3.fromRGB(255,150,150)
-    minusBtn.Text = "- Delay"
-    minusBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    minusBtn.MouseButton1Click:Connect(function()
-        if loopDelay > 0.1 then
-            loopDelay = math.floor((loopDelay - 0.1)*10)/10
-            speedLabel.Text = "⏱️ Delay: "..loopDelay.."s"
-        end
-    end)
-    
-    -- ScrollFrame untuk tombol CP
+    -- ScrollFrame CP
     local scroll = Instance.new("ScrollingFrame", frame)
-    scroll.Size = UDim2.new(1,-20,0,140)
-    scroll.Position = UDim2.new(0,10,0,185)
+    scroll.Size = UDim2.new(1,-20,0,190)
+    scroll.Position = UDim2.new(0,10,0,160)
     scroll.CanvasSize = UDim2.new(0,0,0,#checkpoints * 35)
     scroll.ScrollBarThickness = 6
     scroll.BackgroundColor3 = Color3.fromRGB(45,45,50)
@@ -295,5 +253,5 @@ local function createUI()
 end
 
 -- Start
-showNotification("YARS Ready", "Summit Auto Loaded!")
+showCustomNotification("YARS Ready","Summit Auto Loaded!",Color3.fromRGB(100,200,255),3)
 createUI()
