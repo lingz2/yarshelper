@@ -1,24 +1,31 @@
--- Gunung Batu Teleport GUI (Delta Executor Ready)
--- Tekan tombol [M] untuk show/hide GUI
+-- Gunung Batu Teleport GUI + Auto Summit + Update MDPL + Moveable
+-- Delta Executor Ready
+-- Tekan [M] untuk toggle GUI
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- Data CP (CFrame)
+-- Data CP
 local cps = {
-    cp1  = CFrame.new(-165.121399, 4.23206806, -657.757263, 0.766828477, 0, -0.641852021, 0, 1, 0, 0.641852021, 0, 0.766828477),
-    cp2  = CFrame.new(-121.60952, 8.50454998, 544.049377, 1, 0, -0.000192576554, 0, 1, 0, 0.000192576554, 0, 1),
-    cp3  = CFrame.new(-40.0167122, 392.432037, 673.959045, 0.999995112, 0, 0.00312702474, 0, 1, 0, -0.00312702474, 0, 0.999995112),
-    cp4  = CFrame.new(-297484.432037, 779, 1), -- simplified (rotasi identity)
+    cp1  = CFrame.new(-165.121399, 4.23206806, -657.757263),
+    cp2  = CFrame.new(-121.60952, 8.50454998, 544.049377),
+    cp3  = CFrame.new(-40.0167122, 392.432037, 673.959045),
+    cp4  = CFrame.new(-296.999634, 484.432037, 779.003052),
     cp5  = CFrame.new(18.0000038, 572.429688, 692),
     cp6  = CFrame.new(595.273804, 916.432007, 620.967712),
     cp7  = CFrame.new(283.5, 1196.43201, 181.5),
-    cp8  = CFrame.new(552.105835, 1528.43201,-581.302246),
-    cp9  = CFrame.new(332.142334, 1736.43201,-260.883789),
+    cp8  = CFrame.new(552.105835, 1528.43201, -581.302246),
+    cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
+    Summit = CFrame.new(408.080811, 3261.43188, -110.906059),
 }
+
+-- Remote
+local UpdateMDPL = ReplicatedStorage:FindFirstChild("UpdateMDPL")
+local SummitRemote = ReplicatedStorage:FindFirstChild("Summit") or ReplicatedStorage:FindFirstChild("Finish")
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -27,33 +34,43 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 250, 0, 350)
+main.Size = UDim2.new(0, 280, 0, 420)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
-main.BackgroundColor3 = Color3.fromRGB(30,30,30)
+main.BackgroundColor3 = Color3.fromRGB(25,25,35)
+main.BorderSizePixel = 0
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+main.Active = true
+main.Draggable = true -- aktifkan drag
 
 local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1, -40, 0, 30)
+title.Size = UDim2.new(1, -40, 0, 36)
 title.Position = UDim2.new(0, 10, 0, 0)
 title.Text = "Gunung Batu Teleport"
-title.TextColor3 = Color3.new(1,1,1)
+title.TextColor3 = Color3.fromRGB(255,255,255)
 title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
 
 local close = Instance.new("TextButton", main)
 close.Size = UDim2.new(0,30,0,30)
-close.Position = UDim2.new(1,-35,0,0)
+close.Position = UDim2.new(1,-35,0,3)
 close.Text = "X"
+close.TextColor3 = Color3.new(1,0.4,0.4)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 16
+close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -40)
-scroll.Position = UDim2.new(0,5,0,35)
+scroll.Size = UDim2.new(1, -10, 1, -70)
+scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
-scroll.BackgroundTransparency = 0.2
-scroll.BackgroundColor3 = Color3.fromRGB(40,40,40)
+scroll.BackgroundTransparency = 0.1
+scroll.BackgroundColor3 = Color3.fromRGB(35,35,45)
 
 local list = Instance.new("UIListLayout", scroll)
-list.Padding = UDim.new(0,5)
+list.Padding = UDim.new(0,6)
 list.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- fungsi teleport
@@ -63,18 +80,101 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- buat tombol tiap CP
-for name, cf in pairs(cps) do
+-- fungsi trigger Summit asli
+local function triggerSummit()
+    if SummitRemote and SummitRemote:IsA("RemoteEvent") then
+        SummitRemote:FireServer()
+    end
+end
+
+-- tombol urut
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Update MDPL","Auto Summit"}
+
+local autoSummitRunning = false
+local autoDelay = 0.5 -- default delay
+
+for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1,-10,0,30)
+    btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
+                        or (name=="Update MDPL") and Color3.fromRGB(60,160,100)
+                        or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
+                        or Color3.fromRGB(55,55,65)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        tp(cf)
+        if name=="Summit" then
+            triggerSummit()
+            tp(cps["cp1"])
+        elseif name=="Update MDPL" then
+            if UpdateMDPL and UpdateMDPL:IsA("RemoteEvent") then
+                UpdateMDPL:FireServer()
+            end
+        elseif name=="Auto Summit" then
+            if autoSummitRunning then
+                autoSummitRunning = false
+                btn.Text = "Auto Summit"
+            else
+                autoSummitRunning = true
+                btn.Text = "Stop Auto"
+                spawn(function()
+                    while autoSummitRunning do
+                        for i=1, #order-3 do -- cp1-cp11
+                            if not autoSummitRunning then break end
+                            tp(cps["cp"..i])
+                            task.wait(autoDelay)
+                        end
+                        if not autoSummitRunning then break end
+                        tp(cps["Summit"])
+                        triggerSummit()
+                        task.wait(autoDelay)
+                        if UpdateMDPL and UpdateMDPL:IsA("RemoteEvent") then
+                            UpdateMDPL:FireServer()
+                        end
+                        tp(cps["cp1"])
+                        task.wait(autoDelay)
+                    end
+                end)
+            end
+        else
+            tp(cps[name])
+        end
     end)
 end
+
+-- slider untuk delay
+local sliderLabel = Instance.new("TextLabel", main)
+sliderLabel.Size = UDim2.new(0.7,0,0,24)
+sliderLabel.Position = UDim2.new(0,10,1,-30)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.TextColor3 = Color3.fromRGB(255,255,255)
+sliderLabel.Font = Enum.Font.GothamSemibold
+sliderLabel.TextSize = 14
+sliderLabel.Text = "Delay: "..autoDelay.." s"
+
+local slider = Instance.new("TextBox", main)
+slider.Size = UDim2.new(0.25,0,0,24)
+slider.Position = UDim2.new(0.72,0,1,-30)
+slider.BackgroundColor3 = Color3.fromRGB(55,55,65)
+slider.TextColor3 = Color3.fromRGB(255,255,255)
+slider.Text = tostring(autoDelay)
+slider.Font = Enum.Font.GothamSemibold
+slider.TextSize = 14
+Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
+
+slider.FocusLost:Connect(function(enter)
+    local val = tonumber(slider.Text)
+    if val and val >= 0.1 and val <= 1 then
+        autoDelay = val
+        sliderLabel.Text = "Delay: "..autoDelay.." s"
+    else
+        slider.Text = tostring(autoDelay)
+    end
+end)
 
 -- update scroll size
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -82,11 +182,9 @@ list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 -- close
-close.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- toggle dengan M
+-- toggle [M]
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.M then
