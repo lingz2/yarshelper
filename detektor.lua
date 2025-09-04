@@ -1,43 +1,51 @@
--- DETEKTOR TOMBOL SUMMIT / REMOTE EVENT
+-- UNIVERSAL REMOTE DETECTOR (FireServer)
 -- Delta Executor Ready
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
--- Menyimpan remote yang terdeteksi
-local detectedRemotes = {}
+local detected = {}
 
--- Fungsi untuk hook FireServer
+-- fungsi hook FireServer untuk RemoteEvent
 local function hookRemote(remote)
-    if remote:IsA("RemoteEvent") and not detectedRemotes[remote] then
-        detectedRemotes[remote] = true
-
-        -- Hook FireServer
-        local oldFireServer = remote.FireServer
+    if remote:IsA("RemoteEvent") and not detected[remote] then
+        detected[remote] = true
+        local old = remote.FireServer
         remote.FireServer = function(self, ...)
-            print("[DETECTED REMOTE EVENT] Nama:", remote.Name)
-            print("[ARGUMENTS]:", ...)
-            return oldFireServer(self, ...)
+            print("[REMOTE DETECTED] "..remote:GetFullName())
+            local args = {...}
+            for i,arg in ipairs(args) do
+                print("Arg"..i..":", arg)
+            end
+            return old(self, ...)
         end
     end
 end
 
--- Cek semua RemoteEvent di ReplicatedStorage awal
-for _, v in pairs(ReplicatedStorage:GetChildren()) do
-    if v:IsA("RemoteEvent") then
-        hookRemote(v)
+-- hook semua RemoteEvent di folder tertentu
+local function scanFolder(folder)
+    for _,v in pairs(folder:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            hookRemote(v)
+        end
     end
 end
 
--- Listener untuk RemoteEvent baru yang muncul di ReplicatedStorage
-ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child:IsA("RemoteEvent") then
-        hookRemote(child)
-    end
-end)
+-- scan ReplicatedStorage, Workspace, PlayerScripts
+scanFolder(ReplicatedStorage)
+scanFolder(Workspace)
+scanFolder(player.PlayerScripts)
+scanFolder(player.Backpack)
 
--- Notifikasi di client
+-- listen RemoteEvent baru
+ReplicatedStorage.DescendantAdded:Connect(hookRemote)
+Workspace.DescendantAdded:Connect(hookRemote)
+player.PlayerScripts.DescendantAdded:Connect(hookRemote)
+player.Backpack.DescendantAdded:Connect(hookRemote)
+
+-- notifikasi
 local StarterGui = game:GetService("StarterGui")
 StarterGui:SetCore("SendNotification", {
     Title = "Summit Detector",
