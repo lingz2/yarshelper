@@ -1,11 +1,9 @@
--- YARS Summit Auto Script - FINAL + CP CONTROL + SMART AUTO + RESET SUMMIT
+-- YARS Summit Auto Script - FINAL SMART TOUCH
 -- Auto Summit Loop (cek checkpoint tercatat) + Manual Teleport CP + Reset Summit
+-- Dengan metode "Touch Checkpoint" (spawn luar → masuk ke lingkaran hijau)
 
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -13,7 +11,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- Koordinat CP & Summit
 local checkpoints = {
-    -- CP1 (diperbarui sesuai tracking)
+    -- CP1 (hasil tracking ulang)
     CFrame.new(-134.886337, 419.735596, -220.92305),
 
     CFrame.new(3.00000501, 948.160339, -1054.29395),
@@ -47,61 +45,62 @@ local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 
 -- Vars
 local autoSummitEnabled = false
-local loopDelay = 0.3
+local loopDelay = 0.5 -- delay antar CP
 
 -- Custom Notification
 local function showCustomNotification(title, text, color, duration)
-    local notification = Instance.new("ScreenGui")
-    notification.Name = "YARSCustomNotification"
-    notification.Parent = CoreGui
-    notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 300, 0, 60)
-    frame.Position = UDim2.new(1, -320, 0, 20)
-    frame.BackgroundColor3 = color or Color3.fromRGB(30,30,35)
+    local sg = Instance.new("ScreenGui", playerGui)
+    sg.Name = "YARSNotif"..tick()
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local frame = Instance.new("Frame", sg)
+    frame.Size = UDim2.new(0,280,0,55)
+    frame.Position = UDim2.new(1,20,0,20)
+    frame.BackgroundColor3 = color or Color3.fromRGB(40,40,45)
     frame.BorderSizePixel = 0
-    frame.Parent = notification
-    
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    
-    local titleLabel = Instance.new("TextLabel", frame)
-    titleLabel.Size = UDim2.new(1,-20,0,20)
-    titleLabel.Position = UDim2.new(0,10,0,5)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 14
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local textLabel = Instance.new("TextLabel", frame)
-    textLabel.Size = UDim2.new(1,-20,0,30)
-    textLabel.Position = UDim2.new(0,10,0,25)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = text
-    textLabel.TextColor3 = Color3.fromRGB(220,220,220)
-    textLabel.Font = Enum.Font.Gotham
-    textLabel.TextSize = 12
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextWrapped = true
-    
-    frame.Position = UDim2.new(1, 20, 0, 20)
-    TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(1, -320, 0, 20)}):Play()
-    
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+
+    local titleLbl = Instance.new("TextLabel", frame)
+    titleLbl.Size = UDim2.new(1,-20,0,20)
+    titleLbl.Position = UDim2.new(0,10,0,5)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.Text = title
+    titleLbl.Font = Enum.Font.GothamBold
+    titleLbl.TextSize = 14
+    titleLbl.TextColor3 = Color3.new(1,1,1)
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local txtLbl = Instance.new("TextLabel", frame)
+    txtLbl.Size = UDim2.new(1,-20,0,25)
+    txtLbl.Position = UDim2.new(0,10,0,25)
+    txtLbl.BackgroundTransparency = 1
+    txtLbl.Text = text
+    txtLbl.Font = Enum.Font.Gotham
+    txtLbl.TextSize = 12
+    txtLbl.TextColor3 = Color3.fromRGB(220,220,220)
+    txtLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    TweenService:Create(frame,TweenInfo.new(0.3,Enum.EasingStyle.Back),{Position=UDim2.new(1,-300,0,20)}):Play()
+
     task.spawn(function()
-        wait(duration or 3)
-        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 20, 0, 20)}):Play()
+        wait(duration or 2.5)
+        TweenService:Create(frame,TweenInfo.new(0.3),{Position=UDim2.new(1,20,0,20)}):Play()
         wait(0.35)
-        notification:Destroy()
+        sg:Destroy()
     end)
 end
 
--- Teleport
-local function teleportTo(cf, name)
+-- Simulasi sentuh checkpoint hijau
+local function touchCheckpoint(cf, name)
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = cf
+        local root = char.HumanoidRootPart
+        -- step 1: spawn di luar lingkaran (mundur 7 stud di sumbu Z)
+        root.CFrame = cf * CFrame.new(0,0,-7)
+        task.wait(0.25)
+        -- step 2: masuk ke dalam lingkaran (CP asli)
+        root.CFrame = cf
+        showCustomNotification("📍 Touch", name.." disentuh", Color3.fromRGB(150,255,150), 1.5)
         return true
     end
     return false
@@ -111,7 +110,7 @@ end
 local function resetSummit()
     pcall(function()
         ReturnToSpawn:FireServer()
-        showCustomNotification("🔄 Reset Summit", "ReturnToSpawn Remote Fired!", Color3.fromRGB(100,255,100), 2)
+        showCustomNotification("🔄 Reset Summit", "ReturnToSpawn Remote!", Color3.fromRGB(255,200,100), 2)
     end)
 end
 
@@ -124,100 +123,40 @@ local function autoSummitLoop()
         while autoSummitEnabled do
             for i, cf in ipairs(checkpoints) do
                 if not autoSummitEnabled then break end
-
                 -- tunggu sampai checkpoint tercatat
                 repeat
-                    teleportTo(cf, (i == #checkpoints) and "Summit" or ("CP"..i))
-                    wait(loopDelay)
+                    touchCheckpoint(cf, (i == #checkpoints) and "Summit" or ("CP"..i))
+                    task.wait(loopDelay)
                 until cpValue.Value >= i or not autoSummitEnabled
             end
 
             if autoSummitEnabled then
-                wait(0.2)
+                task.wait(0.5)
                 resetSummit()
                 showCustomNotification("✅ Summit", "Putaran selesai → Reset → Ulangi", Color3.fromRGB(100,255,100), 3)
-                wait(loopDelay)
+                task.wait(loopDelay)
             end
         end
     end)
 end
 
--- UI
+-- GUI (dipersingkat)
 local function createUI()
-    if playerGui:FindFirstChild("YARSCompactGUI") then
-        playerGui.YARSCompactGUI:Destroy()
-    end
-    
+    if playerGui:FindFirstChild("YARSCompactGUI") then playerGui.YARSCompactGUI:Destroy() end
     local gui = Instance.new("ScreenGui", playerGui)
     gui.Name = "YARSCompactGUI"
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
     local frame = Instance.new("Frame", gui)
     frame.Size = UDim2.new(0,220,0,370)
     frame.Position = UDim2.new(0,20,0.5,-185)
     frame.BackgroundColor3 = Color3.fromRGB(35,35,40)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
-    
-    -- Header
-    local header = Instance.new("Frame", frame)
-    header.Size = UDim2.new(1,0,0,30)
-    header.BackgroundColor3 = Color3.fromRGB(45,45,50)
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0,8)
-    
-    local title = Instance.new("TextLabel", header)
-    title.Size = UDim2.new(1,-60,1,0)
-    title.Position = UDim2.new(0,10,0,0)
-    title.BackgroundTransparency = 1
-    title.Text = "YARS Summit Auto"
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 12
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local close = Instance.new("TextButton", header)
-    close.Size = UDim2.new(0,25,0,25)
-    close.Position = UDim2.new(1,-30,0,2.5)
-    close.BackgroundColor3 = Color3.fromRGB(255,100,100)
-    close.Text = "✕"
-    close.TextColor3 = Color3.fromRGB(255,255,255)
-    close.Font = Enum.Font.GothamBold
-    close.TextSize = 12
-    close.MouseButton1Click:Connect(function()
-        autoSummitEnabled = false
-        gui:Destroy()
-    end)
-    
-    -- Basecamp Button
-    local baseBtn = Instance.new("TextButton", frame)
-    baseBtn.Size = UDim2.new(1,-20,0,30)
-    baseBtn.Position = UDim2.new(0,10,0,40)
-    baseBtn.BackgroundColor3 = Color3.fromRGB(150,150,255)
-    baseBtn.Text = "🏠 Basecamp"
-    baseBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    baseBtn.MouseButton1Click:Connect(function()
-        teleportTo(BASECAMP_POS, "Basecamp")
-    end)
 
-    -- Reset Summit Button
-    local resetBtn = Instance.new("TextButton", frame)
-    resetBtn.Size = UDim2.new(1,-20,0,30)
-    resetBtn.Position = UDim2.new(0,10,0,75)
-    resetBtn.BackgroundColor3 = Color3.fromRGB(255,200,100)
-    resetBtn.Text = "🔄 Reset Summit"
-    resetBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    resetBtn.MouseButton1Click:Connect(function()
-        resetSummit()
-    end)
-    
     -- Auto Summit Toggle
     local autoBtn = Instance.new("TextButton", frame)
     autoBtn.Size = UDim2.new(1,-20,0,35)
-    autoBtn.Position = UDim2.new(0,10,0,115)
+    autoBtn.Position = UDim2.new(0,10,0,40)
     autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
     autoBtn.Text = "⚡ AUTO: OFF"
-    autoBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    autoBtn.Font = Enum.Font.GothamBold
-    autoBtn.TextSize = 12
     autoBtn.MouseButton1Click:Connect(function()
         autoSummitEnabled = not autoSummitEnabled
         if autoSummitEnabled then
@@ -229,29 +168,36 @@ local function createUI()
             autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
         end
     end)
-    
-    -- ScrollFrame CP
+
+    -- Reset Summit Button
+    local resetBtn = Instance.new("TextButton", frame)
+    resetBtn.Size = UDim2.new(1,-20,0,30)
+    resetBtn.Position = UDim2.new(0,10,0,80)
+    resetBtn.BackgroundColor3 = Color3.fromRGB(255,200,100)
+    resetBtn.Text = "🔄 Reset Summit"
+    resetBtn.MouseButton1Click:Connect(resetSummit)
+
+    -- Scroll Manual CP
     local scroll = Instance.new("ScrollingFrame", frame)
-    scroll.Size = UDim2.new(1,-20,0,190)
-    scroll.Position = UDim2.new(0,10,0,160)
-    scroll.CanvasSize = UDim2.new(0,0,0,#checkpoints * 35)
+    scroll.Size = UDim2.new(1,-20,0,240)
+    scroll.Position = UDim2.new(0,10,0,120)
+    scroll.CanvasSize = UDim2.new(0,0,0,#checkpoints*35)
     scroll.ScrollBarThickness = 6
     scroll.BackgroundColor3 = Color3.fromRGB(45,45,50)
     Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
-    
+
     for i, cf in ipairs(checkpoints) do
         local btn = Instance.new("TextButton", scroll)
         btn.Size = UDim2.new(1,-10,0,30)
         btn.Position = UDim2.new(0,5,0,(i-1)*35)
         btn.BackgroundColor3 = Color3.fromRGB(200,200,200)
         btn.Text = (i == #checkpoints) and "🏔️ Summit" or ("📍 CP"..i)
-        btn.TextColor3 = Color3.fromRGB(0,0,0)
         btn.MouseButton1Click:Connect(function()
-            teleportTo(cf, (i == #checkpoints) and "Summit" or "CP"..i)
+            touchCheckpoint(cf, btn.Text)
         end)
     end
 end
 
 -- Start
-showCustomNotification("YARS Ready","Summit Auto Loaded!",Color3.fromRGB(100,200,255),3)
+showCustomNotification("YARS Ready","Summit Auto (Smart Touch) Loaded!",Color3.fromRGB(100,200,255),3)
 createUI()
