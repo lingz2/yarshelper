@@ -1,10 +1,12 @@
--- YARS SUMMIT FINAL SMART AUTO (FINAL REVISI)
+-- YARS SUMMIT FINAL SMART AUTO (FINAL DRAG)
 -- Auto CP lanjut dari posisi, OFF berhenti di tempat
 -- Offset Stud & Speed Delay bisa diatur lewat GUI
+-- Frame GUI bisa dipindah (drag)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
@@ -121,6 +123,28 @@ title.Text = "YARS Summit Helper"
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
+-- Fitur drag GUI
+local dragging, dragStart, startPos
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
 -- Tombol auto
 local autoBtn = Instance.new("TextButton", frame)
 autoBtn.Size = UDim2.new(1,-20,0,30)
@@ -212,7 +236,6 @@ plusBtn.MouseButton1Click:Connect(function()
     retryDelay = math.clamp(retryDelay + 0.1,0.1,1)
     speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
 end)
-
 minusBtn.MouseButton1Click:Connect(function()
     retryDelay = math.clamp(retryDelay - 0.1,0.1,1)
     speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
