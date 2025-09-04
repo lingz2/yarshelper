@@ -1,79 +1,49 @@
--- REMOTE SCANNER AMAN (Hanya membaca, tidak hook)
--- Delta Executor Ready
+-- Tombol UpdateMDPL (Delta Executor Ready)
+-- Script sederhana, aman untuk tes
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
+
+-- Cari UpdateMDPL di ReplicatedStorage
+local UpdateMDPL = ReplicatedStorage:FindFirstChild("UpdateMDPL")
+if not UpdateMDPL then
+    warn("UpdateMDPL tidak ditemukan di ReplicatedStorage")
+    return
+end
 
 -- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "SafeRemoteScanner"
+gui.Name = "UpdateMDPL_GUI"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0,400,0,300)
-main.Position = UDim2.new(0.05,0,0.1,0)
-main.BackgroundColor3 = Color3.fromRGB(25,25,35)
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
-main.Active = true
-main.Draggable = true
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,60)
+frame.Position = UDim2.new(0.05,0,0.1,0)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,40)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
 
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,0,0,36)
-title.BackgroundTransparency = 1
-title.Text = "Safe Remote Scanner"
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+local btn = Instance.new("TextButton", frame)
+btn.Size = UDim2.new(1,-20,1,-20)
+btn.Position = UDim2.new(0,10,0,10)
+btn.Text = "Update MDPL"
+btn.TextColor3 = Color3.fromRGB(255,255,255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 16
+btn.BackgroundColor3 = Color3.fromRGB(70,50,160)
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
 
-local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1,-10,1,-46)
-scroll.Position = UDim2.new(0,5,0,40)
-scroll.BackgroundColor3 = Color3.fromRGB(35,35,45)
-scroll.ScrollBarThickness = 6
-scroll.CanvasSize = UDim2.new(0,0,0,0)
-
-local list = Instance.new("UIListLayout", scroll)
-list.Padding = UDim.new(0,4)
-list.SortOrder = Enum.SortOrder.LayoutOrder
-
-local function logRemote(text)
-    local lbl = Instance.new("TextLabel", scroll)
-    lbl.Size = UDim2.new(1,-10,0,20)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 14
-    lbl.Text = text
-    scroll.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y+10)
-end
-
--- scan folder tanpa hook
-local function scanFolder(folder)
-    for _,v in pairs(folder:GetDescendants()) do
-        if v:IsA("RemoteEvent") then
-            logRemote("[RemoteEvent] "..v:GetFullName())
-        elseif v:IsA("RemoteFunction") then
-            logRemote("[RemoteFunction] "..v:GetFullName())
-        end
+btn.MouseButton1Click:Connect(function()
+    if UpdateMDPL:IsA("RemoteEvent") then
+        UpdateMDPL:FireServer()
+        print("UpdateMDPL:FireServer() dipanggil")
+    elseif UpdateMDPL:IsA("RemoteFunction") then
+        UpdateMDPL:InvokeServer()
+        print("UpdateMDPL:InvokeServer() dipanggil")
+    else
+        warn("UpdateMDPL bukan RemoteEvent atau RemoteFunction")
     end
-end
-
-scanFolder(ReplicatedStorage)
-scanFolder(Workspace)
-scanFolder(player.PlayerScripts)
-scanFolder(player.Backpack)
-
--- listen remote baru muncul
-local folders = {ReplicatedStorage, Workspace, player.PlayerScripts, player.Backpack}
-for _,folder in pairs(folders) do
-    folder.DescendantAdded:Connect(function(v)
-        if v:IsA("RemoteEvent") then
-            logRemote("[RemoteEvent] "..v:GetFullName())
-        elseif v:IsA("RemoteFunction") then
-            logRemote("[RemoteFunction] "..v:GetFullName())
-        end
-    end)
-end
+end)
