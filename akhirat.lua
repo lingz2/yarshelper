@@ -1,6 +1,6 @@
--- YARS Summit Auto Script - FINAL SMART TOUCH
+-- YARS Summit Auto Script - FINAL SMART TOUCH + OFFSET SLIDER
 -- Auto Summit Loop (cek checkpoint tercatat) + Manual Teleport CP + Reset Summit
--- Dengan metode "Touch Checkpoint" (spawn luar → masuk ke lingkaran hijau)
+-- Metode "Touch Checkpoint" (spawn di luar → masuk lingkaran hijau)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -9,11 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Koordinat CP & Summit
+-- Data Checkpoints (CP1 hasil tracking ulang)
 local checkpoints = {
-    -- CP1 (hasil tracking ulang)
-    CFrame.new(-134.886337, 419.735596, -220.92305),
-
+    CFrame.new(-134.886337, 419.735596, -220.92305), -- CP1
     CFrame.new(3.00000501, 948.160339, -1054.29395),
     CFrame.new(108.989052, 1200.19873, -1359.28259),
     CFrame.new(102.756409, 1463.6759, -1807.98047),
@@ -38,14 +36,13 @@ local checkpoints = {
     CFrame.new(3041.74048, 7876.99756, 1037.59253) -- Summit
 }
 
-local BASECAMP_POS = CFrame.new(-243.999069, 120.998016, 202.997528)
-
 -- Remote Reset Summit
 local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 
 -- Vars
 local autoSummitEnabled = false
 local loopDelay = 0.5 -- delay antar CP
+local offsetStud = 7   -- default offset spawn sebelum masuk CP
 
 -- Custom Notification
 local function showCustomNotification(title, text, color, duration)
@@ -95,11 +92,9 @@ local function touchCheckpoint(cf, name)
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local root = char.HumanoidRootPart
-        -- step 1: spawn di luar lingkaran (mundur 7 stud di sumbu Z)
-        root.CFrame = cf * CFrame.new(0,0,-7)
+        root.CFrame = cf * CFrame.new(0,0,-offsetStud) -- spawn luar
         task.wait(0.25)
-        -- step 2: masuk ke dalam lingkaran (CP asli)
-        root.CFrame = cf
+        root.CFrame = cf -- masuk dalam lingkaran
         showCustomNotification("📍 Touch", name.." disentuh", Color3.fromRGB(150,255,150), 1.5)
         return true
     end
@@ -114,7 +109,7 @@ local function resetSummit()
     end)
 end
 
--- Auto Summit Loop (cek checkpoint naik)
+-- Auto Summit Loop
 local function autoSummitLoop()
     task.spawn(function()
         local leaderstats = player:WaitForChild("leaderstats")
@@ -123,7 +118,6 @@ local function autoSummitLoop()
         while autoSummitEnabled do
             for i, cf in ipairs(checkpoints) do
                 if not autoSummitEnabled then break end
-                -- tunggu sampai checkpoint tercatat
                 repeat
                     touchCheckpoint(cf, (i == #checkpoints) and "Summit" or ("CP"..i))
                     task.wait(loopDelay)
@@ -140,18 +134,18 @@ local function autoSummitLoop()
     end)
 end
 
--- GUI (dipersingkat)
+-- UI
 local function createUI()
     if playerGui:FindFirstChild("YARSCompactGUI") then playerGui.YARSCompactGUI:Destroy() end
     local gui = Instance.new("ScreenGui", playerGui)
     gui.Name = "YARSCompactGUI"
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0,220,0,370)
-    frame.Position = UDim2.new(0,20,0.5,-185)
+    frame.Size = UDim2.new(0,220,0,420)
+    frame.Position = UDim2.new(0,20,0.5,-210)
     frame.BackgroundColor3 = Color3.fromRGB(35,35,40)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
 
-    -- Auto Summit Toggle
+    -- Auto Summit
     local autoBtn = Instance.new("TextButton", frame)
     autoBtn.Size = UDim2.new(1,-20,0,35)
     autoBtn.Position = UDim2.new(0,10,0,40)
@@ -169,7 +163,7 @@ local function createUI()
         end
     end)
 
-    -- Reset Summit Button
+    -- Reset Summit
     local resetBtn = Instance.new("TextButton", frame)
     resetBtn.Size = UDim2.new(1,-20,0,30)
     resetBtn.Position = UDim2.new(0,10,0,80)
@@ -177,10 +171,52 @@ local function createUI()
     resetBtn.Text = "🔄 Reset Summit"
     resetBtn.MouseButton1Click:Connect(resetSummit)
 
+    -- Offset Slider
+    local sliderLbl = Instance.new("TextLabel", frame)
+    sliderLbl.Size = UDim2.new(1,-20,0,20)
+    sliderLbl.Position = UDim2.new(0,10,0,115)
+    sliderLbl.BackgroundTransparency = 1
+    sliderLbl.Text = "Offset: "..offsetStud.." stud"
+    sliderLbl.Font = Enum.Font.Gotham
+    sliderLbl.TextSize = 12
+    sliderLbl.TextColor3 = Color3.fromRGB(220,220,220)
+
+    local slider = Instance.new("TextButton", frame)
+    slider.Size = UDim2.new(1,-20,0,20)
+    slider.Position = UDim2.new(0,10,0,140)
+    slider.BackgroundColor3 = Color3.fromRGB(60,60,70)
+    slider.Text = ""
+
+    local handle = Instance.new("Frame", slider)
+    handle.Size = UDim2.new(0,20,1,0)
+    handle.BackgroundColor3 = Color3.fromRGB(120,200,255)
+    Instance.new("UICorner", handle).CornerRadius = UDim.new(0,4)
+
+    local dragging = false
+    slider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    slider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local relX = math.clamp((input.Position.X - slider.AbsolutePosition.X)/slider.AbsoluteSize.X,0,1)
+            handle.Position = UDim2.new(relX, -10, 0, 0)
+            offsetStud = math.floor(3 + (12*relX)) -- 3–15 stud
+            sliderLbl.Text = "Offset: "..offsetStud.." stud"
+        end
+    end)
+
     -- Scroll Manual CP
     local scroll = Instance.new("ScrollingFrame", frame)
-    scroll.Size = UDim2.new(1,-20,0,240)
-    scroll.Position = UDim2.new(0,10,0,120)
+    scroll.Size = UDim2.new(1,-20,0,220)
+    scroll.Position = UDim2.new(0,10,0,170)
     scroll.CanvasSize = UDim2.new(0,0,0,#checkpoints*35)
     scroll.ScrollBarThickness = 6
     scroll.BackgroundColor3 = Color3.fromRGB(45,45,50)
