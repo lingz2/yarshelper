@@ -1,6 +1,6 @@
--- YARS SUMMIT FINAL SMART AUTO (CFrame Version)
+-- YARS SUMMIT FINAL SMART AUTO
 -- Auto CP1-22 > Summit > ReturnToSpawn
--- Stop di posisi terakhir ketika OFF (tidak reset ulang)
+-- Teleport pinggir dengan offset stud (atur via GUI)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 
 local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 local autoEnabled = false
+local offsetStud = 13 -- default jarak geser pinggir
 
 local function notify(title, text)
     pcall(function()
@@ -20,6 +21,7 @@ end
 
 -- cek apakah checkpoint ke-i sudah tercatat
 local function isCheckpointSaved(index)
+    -- sesuaikan dengan game: misalnya leaderstats.Checkpoint.Value == index
     local stats = player:FindFirstChild("leaderstats")
     if stats and stats:FindFirstChild("Checkpoint") then
         return stats.Checkpoint.Value >= index
@@ -27,38 +29,42 @@ local function isCheckpointSaved(index)
     return false
 end
 
--- Daftar CP pakai full CFrame
+-- Pusat bundaran checkpoint (XYZ saja)
 local cpList = {
-    CFrame.new(-128.860931,420.21344,-210.443787,-0.382131785,-1.759414176e-09,0.92410785,3.28097638e-09,1,3.26063621e-09,-0.92410785,4.27796865e-09,-0.382131785),
-    CFrame.new(-13.3578444,948.377625,-1047.88647,0.950412035,-2.329092256e-09,0.310993552,9.13760267e-09,1,-2.043577936e-08,-0.310993552,2.22641461e-08,0.950412035),
-    CFrame.new(103.504997,1199.91821,-1348.18542,0.458309442,4.075202046e-08,0.888792694,6.23996144e-09,1,-4.90686466e-08,-0.888792694,2.80346573e-08,0.458309442),
-    CFrame.new(109.371323,1463.27966,-1818.04211,-0.22470805,-3.030606522e-08,-0.97442615,1.96519032e-08,1,-3.563328836e-08,0.97442615,-2.7156414e-08,-0.22470805),
-    CFrame.new(292.275543,1864.36096,-2330.11597,-0.845709741,-1.84433375e-08,0.533643186,-5.768799136e-08,1,-5.68618894e-08,-0.533643186,-7.88734553e-08,-0.845709741),
-    CFrame.new(555.965149,2084.33984,-2570.9231,-0.220515072,5.458198166e-08,0.97538358,7.0394627e-08,1,-4.004466456e-08,-0.97538358,5.983130796e-08,-0.220515072),
-    CFrame.new(743.121399,2184.43188,-2504.37061,0.949542642,2.91279498e-08,-0.313637942,-6.01314269e-08,1,-8.91773624e-08,0.313637942,1.03537211e-07,0.949542642),
-    CFrame.new(781.188354,2328.43188,-2639.73315,0.994524181,-1.77558857e-08,0.104506589,1.80032149e-08,1,-1.42332823e-09,-0.104506589,3.29698896e-09,0.994524181),
-    CFrame.new(980.821838,2516.43188,-2633.94751,-0.99996984,-6.724003046e-08,0.00776741421,-6.649077026e-08,1,9.672028516e-08,-0.00776741421,9.620090682e-08,-0.99996984),
-    CFrame.new(1249.43677,2692.23193,-2797.09277,-0.853834391,-1.17835048e-08,0.520544767,4.78341491e-08,1,1.01097832e-07,-0.520544767,1.11220622e-07,-0.853834391),
-    CFrame.new(1611.08203,3055.91797,-2757.21118,0.131025508,-5.10120113e-10,-0.991379023,1.02527166e-07,1,1.30359359e-08,0.991379023,-1.03351312e-07,0.131025508),
-    CFrame.new(1824.25525,3576.43188,-3249.31519,0.999494255,5.061787436e-08,-0.0317998789,-4.86157076e-08,1,6.37347028e-08,0.0317998789,-6.21564951e-08,0.999494255),
-    CFrame.new(2798.35181,4420.43164,-4792.23438,0.968395889,8.024288436e-08,0.24941808,-9.42676692e-08,1,4.42852439e-08,-0.24941808,-6.63977104e-08,0.968395889),
-    CFrame.new(3464.74072,4856.23145,-4167.43652,0.381198376,7.223593466e-08,0.924493253,1.79294659e-08,1,-8.552860466e-08,-0.924493253,4.9179036e-08,0.381198376),
-    CFrame.new(3471.62354,5104.23193,-4268.91064,-0.206839263,1.298620596e-08,0.978374958,5.05800415e-08,1,-2.58006172e-09,-0.978374958,4.89525866e-08,-0.206839263),
-    CFrame.new(3965.27051,5664.43115,-3980.47144,0.515083551,-4.925955476e-08,-0.857140005,3.662621856e-08,1,-3.54597809e-08,0.857140005,-1.31290472e-08,0.515083551),
-    CFrame.new(4494.03174,5896.43213,-3780.8623,0.153532073,2.276739866e-08,0.988143682,8.98150105e-08,1,-3.699551246e-08,-0.988143682,9.443013486e-08,0.153532073),
-    CFrame.new(5073.77783,6368.43115,-2972.59082,0.694449544,-3.551662456e-08,-0.719541371,-1.18178347e-08,1,-6.076859196e-08,0.719541371,5.07041413e-08,0.694449544),
-    CFrame.new(5532.8501,6588.43115,-2479.97827,0.248890966,-7.51316787e-09,0.968531489,6.723634096e-09,1,6.02945427e-09,-0.968531489,5.01137487e-09,0.248890966),
-    CFrame.new(5540.1416,6872.43164,-1042.22229,0.73816818,-3.26914786e-08,0.674616694,5.376668e-08,1,-1.03723696e-08,-0.674616694,4.392845556e-08,0.73816818),
-    CFrame.new(4329.44238,7640.52539,143.648972,-0.612230599,-2.102335916e-08,0.790679276,-1.113229266e-07,1,-5.96094267e-08,-0.790679276,-1.24515438e-07,-0.612230599),
-    CFrame.new(3465.52759,7706.62305,945.052124,-0.776398003,9.1943525e-10,0.630242944,1.28742013e-08,1,1.440090546e-08,-0.630242944,1.92947081e-08,-0.776398003)
+    Vector3.new(-134.886,419.735,-220.923), -- cp1
+    Vector3.new(3,948.16,-1054.293), -- cp2
+    Vector3.new(108.989,1200.198,-1359.282), -- cp3
+    Vector3.new(102.756,1463.675,-1807.980), -- cp4
+    Vector3.new(299.767,1863.834,-2331.907), -- cp5
+    Vector3.new(560.049,2083.413,-2560.358), -- cp6
+    Vector3.new(754.672,2184.431,-2500.259), -- cp7
+    Vector3.new(793,2328.431,-2641.294), -- cp8
+    Vector3.new(969,2516.431,-2632.294), -- cp9
+    Vector3.new(1239,2692.231,-2803.294), -- cp10
+    Vector3.new(1621.734,3056.231,-2752.297), -- cp11
+    Vector3.new(1812.914,3576.431,-3246.645), -- cp12
+    Vector3.new(2809.925,4418.998,-4792.259), -- cp13
+    Vector3.new(3470,4856.231,-4178.293), -- cp14
+    Vector3.new(3477.916,5102.791,-4273.476), -- cp15
+    Vector3.new(3974.893,5664.431,-3970.728), -- cp16
+    Vector3.new(4497.52,5896.431,-3786.269), -- cp17
+    Vector3.new(5062.791,6368.431,-2973.971), -- cp18
+    Vector3.new(5537.998,6588.431,-2484.27), -- cp19
+    Vector3.new(5548.549,6870.99,-1047.394), -- cp20
+    Vector3.new(4328.273,7638.656,131.682), -- cp21
+    Vector3.new(3456.184,7708.392,937.936) -- cp22
 }
-local summit = CFrame.new(3041.74,7876.997,1037.592)
+local summit = Vector3.new(3041.74,7876.997,1037.592)
 
--- Teleport langsung ke CFrame
-local function tpTo(cf, name)
+-- Teleport: pinggir -> tengah
+local function tpTo(pos, name)
     local char = player.Character
     if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
-    char.HumanoidRootPart.CFrame = cf
+    local root = char.HumanoidRootPart
+    local cf = CFrame.new(pos)
+    root.CFrame = cf * CFrame.new(offsetStud,0,0) -- pinggir
+    task.wait(0.3)
+    root.CFrame = cf -- tengah
     notify("Teleport", name.." ✅")
 end
 
@@ -67,14 +73,14 @@ local function resetSummit()
     notify("Reset Summit","ReturnToSpawn ✅")
 end
 
--- Auto loop
+-- Auto loop dengan cek checkpoint
 local function autoLoop()
     task.spawn(function()
         while autoEnabled do
-            for i,cf in ipairs(cpList) do
+            for i,pos in ipairs(cpList) do
                 if not autoEnabled then break end
                 repeat
-                    tpTo(cf,"CP"..i)
+                    tpTo(pos,"CP"..i)
                     task.wait(0.8)
                 until not autoEnabled or isCheckpointSaved(i)
             end
@@ -86,8 +92,9 @@ local function autoLoop()
 end
 
 -- GUI
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local gui = Instance.new("ScreenGui")
 gui.Name = "YARSFinal"
+gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0,220,0,360)
@@ -134,7 +141,7 @@ scroll.Position = UDim2.new(0,10,0,120)
 scroll.CanvasSize = UDim2.new(0,0,0,35*(#cpList+1))
 scroll.ScrollBarThickness = 6
 
-for i,cf in ipairs(cpList) do
+for i,pos in ipairs(cpList) do
     local b = Instance.new("TextButton", scroll)
     b.Size = UDim2.new(1,-10,0,30)
     b.Position = UDim2.new(0,5,0,(i-1)*35)
@@ -142,7 +149,7 @@ for i,cf in ipairs(cpList) do
     b.BackgroundColor3 = Color3.fromRGB(80,80,150)
     b.TextColor3 = Color3.new(1,1,1)
     b.MouseButton1Click:Connect(function()
-        tpTo(cf,"CP"..i)
+        tpTo(pos,"CP"..i)
     end)
 end
 
@@ -156,4 +163,16 @@ sb.MouseButton1Click:Connect(function()
     tpTo(summit,"Summit")
 end)
 
-notify("YARS Summit","Final Smart Auto (CFrame) ✅")
+-- Slider offset stud
+local slider = Instance.new("TextButton", frame)
+slider.Size = UDim2.new(1,-20,0,30)
+slider.Position = UDim2.new(0,10,0,330)
+slider.BackgroundColor3 = Color3.fromRGB(150,150,80)
+slider.Text = "Offset Stud: "..offsetStud
+slider.MouseButton1Click:Connect(function()
+    offsetStud = offsetStud + 1
+    if offsetStud > 20 then offsetStud = 10 end
+    slider.Text = "Offset Stud: "..offsetStud
+end)
+
+notify("YARS Summit","Final Smart Auto Loaded ✅")
