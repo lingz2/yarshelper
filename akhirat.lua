@@ -1,6 +1,5 @@
--- YARS Summit Auto Script - FINAL + SPEED CONTROL (CHECKPOINT VERSION)
--- Auto Summit + Respawn Remote (ReturnToSpawn)
--- Teleport CP1 → CP22 → Summit → Reset
+-- YARS Summit Auto Script - FINAL + CP CONTROL + SMART AUTO
+-- Auto Summit per Checkpoint (cek leaderstats) + Manual Teleport CP
 -- Delay control 0.1s - 1.0s
 
 local Players = game:GetService("Players")
@@ -8,47 +7,47 @@ local TeleportService = game:GetService("TeleportService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Koordinat
-local SUMMIT_POS = CFrame.new(3041.74048, 7876.99756, 1037.59253) -- Puncak
-local BASECAMP_POS = CFrame.new(-243.999069, 120.998016, 202.997528) -- Basecamp
+-- Koordinat CP & Summit
+local checkpoints = {
+    CFrame.new(135.182388, 419.724579, -220.798828),
+    CFrame.new(3.00000501, 948.160339, -1054.29395),
+    CFrame.new(108.989052, 1200.19873, -1359.28259),
+    CFrame.new(102.756409, 1463.6759, -1807.98047),
+    CFrame.new(299.767181, 1863.83423, -2331.90723),
+    CFrame.new(560.049927, 2083.41382, -2560.3584),
+    CFrame.new(754.672485, 2184.43188, -2500.25903),
+    CFrame.new(793, 2328.43188, -2641.29492),
+    CFrame.new(969, 2516.43188, -2632.29443),
+    CFrame.new(1239, 2692.23193, -2803.29468),
+    CFrame.new(1621.73401, 3056.23193, -2752.29712),
+    CFrame.new(1812.91406, 3576.43188, -3246.64526),
+    CFrame.new(2809.92578, 4418.99805, -4792.25928),
+    CFrame.new(3470, 4856.23193, -4178.29346),
+    CFrame.new(3477.91699, 5102.79199, -4273.47607),
+    CFrame.new(3974.8938, 5664.43164, -3970.72803),
+    CFrame.new(4497.52051, 5896.43164, -3786.26978),
+    CFrame.new(5062.7915, 6368.43164, -2973.97192),
+    CFrame.new(5537.99805, 6588.43164, -2484.27026),
+    CFrame.new(5548.54932, 6870.99072, -1047.39441),
+    CFrame.new(4328.27344, 7638.65674, 131.682388),
+    CFrame.new(3456.18457, 7708.39209, 937.936584),
+    CFrame.new(3041.74048, 7876.99756, 1037.59253) -- Summit
+}
+
+local BASECAMP_POS = CFrame.new(-243.999069, 120.998016, 202.997528)
 
 -- Remote Reset Summit
-local ReturnToSpawn = game.ReplicatedStorage:WaitForChild("ReturnToSpawn")
+local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 
 -- Vars
 local autoSummitEnabled = false
-local loopDelay = 0.3 -- default (detik) | min 0.1 - max 1.0
-
--- Daftar Checkpoint
-local checkpoints = {
-    CFrame.new(135.182388, 419.724579, -220.798828), -- cp1
-    CFrame.new(3.00000501, 948.160339, -1054.29395), -- cp2
-    CFrame.new(108.989052, 1200.19873, -1359.28259), -- cp3
-    CFrame.new(102.756409, 1463.6759, -1807.98047), -- cp4
-    CFrame.new(299.767181, 1863.83423, -2331.90723), -- cp5
-    CFrame.new(560.049927, 2083.41382, -2560.3584), -- cp6
-    CFrame.new(754.672485, 2184.43188, -2500.25903), -- cp7
-    CFrame.new(793, 2328.43188, -2641.29492), -- cp8
-    CFrame.new(969, 2516.43188, -2632.29443), -- cp9
-    CFrame.new(1239, 2692.23193, -2803.29468), -- cp10
-    CFrame.new(1621.73401, 3056.23193, -2752.29712), -- cp11
-    CFrame.new(1812.91406, 3576.43188, -3246.64526), -- cp12
-    CFrame.new(2809.92578, 4418.99805, -4792.25928), -- cp13
-    CFrame.new(3470, 4856.23193, -4178.29346), -- cp14
-    CFrame.new(3477.91699, 5102.79199, -4273.47607), -- cp15
-    CFrame.new(3974.8938, 5664.43164, -3970.72803), -- cp16
-    CFrame.new(4497.52051, 5896.43164, -3786.26978), -- cp17
-    CFrame.new(5062.7915, 6368.43164, -2973.97192), -- cp18
-    CFrame.new(5537.99805, 6588.43164, -2484.27026), -- cp19
-    CFrame.new(5548.54932, 6870.99072, -1047.39441), -- cp20
-    CFrame.new(4328.27344, 7638.65674, 131.682388), -- cp21
-    CFrame.new(3456.18457, 7708.39209, 937.936584), -- cp22
-    SUMMIT_POS -- terakhir ke summit
-}
+local loopDelay = 0.3
+local isMinimized = false
 
 -- Custom Notification
 local function showCustomNotification(title, text, color, duration)
@@ -128,23 +127,26 @@ local function resetSummit()
     end)
 end
 
--- Auto Summit Loop (CP1 → CP22 → Summit → Reset)
+-- Auto Summit Loop (cek checkpoint naik)
 local function autoSummitLoop()
     task.spawn(function()
+        local leaderstats = player:WaitForChild("leaderstats")
+        local cpValue = leaderstats:WaitForChild("Checkpoint")
+
         while autoSummitEnabled do
-            for i,cf in ipairs(checkpoints) do
+            for i, cf in ipairs(checkpoints) do
                 if not autoSummitEnabled then break end
-                if teleportTo(cf, "CP"..i) then
+
+                repeat
+                    teleportTo(cf, "CP"..i)
                     wait(loopDelay)
-                else
-                    showCustomNotification("❌ Teleport Failed", "Retry CP"..i, Color3.fromRGB(255,100,100), 2)
-                    wait(0.5)
-                end
+                until cpValue.Value >= i or not autoSummitEnabled
             end
+
             if autoSummitEnabled then
                 wait(0.2)
                 resetSummit()
-                showCustomNotification("✅ Summit", "Satu putaran selesai!", Color3.fromRGB(100,255,100), 2)
+                showCustomNotification("✅ Summit", "Satu putaran selesai!", Color3.fromRGB(100,255,100), 3)
                 wait(loopDelay)
             end
         end
@@ -162,8 +164,8 @@ local function createUI()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0,200,0,280)
-    frame.Position = UDim2.new(0,20,0.5,-140)
+    frame.Size = UDim2.new(0,220,0,330)
+    frame.Position = UDim2.new(0,20,0.5,-165)
     frame.BackgroundColor3 = Color3.fromRGB(35,35,40)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
     
@@ -198,7 +200,7 @@ local function createUI()
         showNotification("YARS", "Script Closed")
     end)
     
-    -- Tombol ke Basecamp
+    -- Tombol Basecamp
     local baseBtn = Instance.new("TextButton", frame)
     baseBtn.Size = UDim2.new(1,-20,0,30)
     baseBtn.Position = UDim2.new(0,10,0,40)
@@ -209,32 +211,10 @@ local function createUI()
         teleportTo(BASECAMP_POS, "Basecamp")
     end)
     
-    -- Tombol ke Puncak
-    local summitBtn = Instance.new("TextButton", frame)
-    summitBtn.Size = UDim2.new(1,-20,0,30)
-    summitBtn.Position = UDim2.new(0,10,0,80)
-    summitBtn.BackgroundColor3 = Color3.fromRGB(255,150,100)
-    summitBtn.Text = "🚀 Puncak"
-    summitBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    summitBtn.MouseButton1Click:Connect(function()
-        teleportTo(SUMMIT_POS, "Puncak")
-    end)
-    
-    -- Tombol Respawn Remote
-    local respawnBtn = Instance.new("TextButton", frame)
-    respawnBtn.Size = UDim2.new(1,-20,0,30)
-    respawnBtn.Position = UDim2.new(0,10,0,120)
-    respawnBtn.BackgroundColor3 = Color3.fromRGB(255,200,150)
-    respawnBtn.Text = "🔄 Respawn (Remote)"
-    respawnBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    respawnBtn.MouseButton1Click:Connect(function()
-        resetSummit()
-    end)
-    
-    -- Auto Summit
+    -- Auto Summit Toggle
     local autoBtn = Instance.new("TextButton", frame)
     autoBtn.Size = UDim2.new(1,-20,0,35)
-    autoBtn.Position = UDim2.new(0,10,0,160)
+    autoBtn.Position = UDim2.new(0,10,0,80)
     autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
     autoBtn.Text = "⚡ AUTO: OFF"
     autoBtn.TextColor3 = Color3.fromRGB(0,0,0)
@@ -257,7 +237,7 @@ local function createUI()
     -- Speed Control
     local speedLabel = Instance.new("TextLabel", frame)
     speedLabel.Size = UDim2.new(1,-20,0,20)
-    speedLabel.Position = UDim2.new(0,10,0,205)
+    speedLabel.Position = UDim2.new(0,10,0,125)
     speedLabel.BackgroundTransparency = 1
     speedLabel.Text = "⏱️ Delay: "..loopDelay.."s"
     speedLabel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -266,7 +246,7 @@ local function createUI()
     
     local plusBtn = Instance.new("TextButton", frame)
     plusBtn.Size = UDim2.new(0.5,-15,0,25)
-    plusBtn.Position = UDim2.new(0,10,0,230)
+    plusBtn.Position = UDim2.new(0,10,0,150)
     plusBtn.BackgroundColor3 = Color3.fromRGB(100,200,255)
     plusBtn.Text = "+ Delay"
     plusBtn.TextColor3 = Color3.fromRGB(0,0,0)
@@ -279,7 +259,7 @@ local function createUI()
     
     local minusBtn = Instance.new("TextButton", frame)
     minusBtn.Size = UDim2.new(0.5,-15,0,25)
-    minusBtn.Position = UDim2.new(0.5,5,0,230)
+    minusBtn.Position = UDim2.new(0.5,5,0,150)
     minusBtn.BackgroundColor3 = Color3.fromRGB(255,150,150)
     minusBtn.Text = "- Delay"
     minusBtn.TextColor3 = Color3.fromRGB(0,0,0)
@@ -289,6 +269,27 @@ local function createUI()
             speedLabel.Text = "⏱️ Delay: "..loopDelay.."s"
         end
     end)
+    
+    -- ScrollFrame untuk tombol CP
+    local scroll = Instance.new("ScrollingFrame", frame)
+    scroll.Size = UDim2.new(1,-20,0,140)
+    scroll.Position = UDim2.new(0,10,0,185)
+    scroll.CanvasSize = UDim2.new(0,0,0,#checkpoints * 35)
+    scroll.ScrollBarThickness = 6
+    scroll.BackgroundColor3 = Color3.fromRGB(45,45,50)
+    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
+    
+    for i, cf in ipairs(checkpoints) do
+        local btn = Instance.new("TextButton", scroll)
+        btn.Size = UDim2.new(1,-10,0,30)
+        btn.Position = UDim2.new(0,5,0,(i-1)*35)
+        btn.BackgroundColor3 = Color3.fromRGB(200,200,200)
+        btn.Text = (i == #checkpoints) and "🏔️ Summit" or ("📍 CP"..i)
+        btn.TextColor3 = Color3.fromRGB(0,0,0)
+        btn.MouseButton1Click:Connect(function()
+            teleportTo(cf, (i == #checkpoints) and "Summit" or "CP"..i)
+        end)
+    end
 end
 
 -- Start
