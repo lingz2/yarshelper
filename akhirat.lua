@@ -1,6 +1,6 @@
--- YARS SUMMIT FINAL (LOADABLE)
+-- YARS SUMMIT FINAL SMART AUTO
 -- Auto CP1-22 > Summit > ReturnToSpawn
--- Teleport lewat pinggir 13 stud supaya CP tercatat
+-- Teleport pinggir dengan offset stud (atur via GUI)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 
 local ReturnToSpawn = ReplicatedStorage:WaitForChild("ReturnToSpawn")
 local autoEnabled = false
+local offsetStud = 13 -- default jarak geser pinggir
 
 local function notify(title, text)
     pcall(function()
@@ -16,6 +17,16 @@ local function notify(title, text)
             Title = title, Text = text, Duration = 3
         })
     end)
+end
+
+-- cek apakah checkpoint ke-i sudah tercatat
+local function isCheckpointSaved(index)
+    -- sesuaikan dengan game: misalnya leaderstats.Checkpoint.Value == index
+    local stats = player:FindFirstChild("leaderstats")
+    if stats and stats:FindFirstChild("Checkpoint") then
+        return stats.Checkpoint.Value >= index
+    end
+    return false
 end
 
 -- Pusat bundaran checkpoint (XYZ saja)
@@ -51,8 +62,8 @@ local function tpTo(pos, name)
     if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
     local root = char.HumanoidRootPart
     local cf = CFrame.new(pos)
-    root.CFrame = cf * CFrame.new(13,0,0) -- pinggir
-    task.wait(0.2)
+    root.CFrame = cf * CFrame.new(offsetStud,0,0) -- pinggir
+    task.wait(0.3)
     root.CFrame = cf -- tengah
     notify("Teleport", name.." ✅")
 end
@@ -62,14 +73,16 @@ local function resetSummit()
     notify("Reset Summit","ReturnToSpawn ✅")
 end
 
--- Auto loop
+-- Auto loop dengan cek checkpoint
 local function autoLoop()
     task.spawn(function()
         while autoEnabled do
             for i,pos in ipairs(cpList) do
                 if not autoEnabled then break end
-                tpTo(pos,"CP"..i)
-                task.wait(0.6)
+                repeat
+                    tpTo(pos,"CP"..i)
+                    task.wait(0.8)
+                until not autoEnabled or isCheckpointSaved(i)
             end
             tpTo(summit,"Summit")
             resetSummit()
@@ -84,7 +97,7 @@ gui.Name = "YARSFinal"
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,200,0,300)
+frame.Size = UDim2.new(0,220,0,360)
 frame.Position = UDim2.new(0,20,0.3,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,50)
 Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
@@ -95,6 +108,7 @@ title.Text = "YARS Summit Helper"
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
+-- Tombol auto
 local autoBtn = Instance.new("TextButton", frame)
 autoBtn.Size = UDim2.new(1,-20,0,30)
 autoBtn.Position = UDim2.new(0,10,0,40)
@@ -112,6 +126,7 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Tombol reset summit
 local resetBtn = Instance.new("TextButton", frame)
 resetBtn.Size = UDim2.new(1,-20,0,30)
 resetBtn.Position = UDim2.new(0,10,0,80)
@@ -121,7 +136,7 @@ resetBtn.MouseButton1Click:Connect(resetSummit)
 
 -- Scroll daftar CP
 local scroll = Instance.new("ScrollingFrame", frame)
-scroll.Size = UDim2.new(1,-20,0,170)
+scroll.Size = UDim2.new(1,-20,0,200)
 scroll.Position = UDim2.new(0,10,0,120)
 scroll.CanvasSize = UDim2.new(0,0,0,35*(#cpList+1))
 scroll.ScrollBarThickness = 6
@@ -148,4 +163,16 @@ sb.MouseButton1Click:Connect(function()
     tpTo(summit,"Summit")
 end)
 
-notify("YARS Summit","Final Script Loaded ✅")
+-- Slider offset stud
+local slider = Instance.new("TextButton", frame)
+slider.Size = UDim2.new(1,-20,0,30)
+slider.Position = UDim2.new(0,10,0,330)
+slider.BackgroundColor3 = Color3.fromRGB(150,150,80)
+slider.Text = "Offset Stud: "..offsetStud
+slider.MouseButton1Click:Connect(function()
+    offsetStud = offsetStud + 1
+    if offsetStud > 20 then offsetStud = 10 end
+    slider.Text = "Offset Stud: "..offsetStud
+end)
+
+notify("YARS Summit","Final Smart Auto Loaded ✅")
