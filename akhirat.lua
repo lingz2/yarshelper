@@ -1,6 +1,6 @@
--- YARS SUMMIT FINAL SMART AUTO (REVISI)
+-- YARS SUMMIT FINAL SMART AUTO (FINAL REVISI)
 -- Auto CP lanjut dari posisi, OFF berhenti di tempat
--- Ada pengaturan speed (delay retry CP) via GUI
+-- Offset Stud & Speed Delay bisa diatur lewat GUI
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -110,7 +110,7 @@ gui.Name = "YARSFinal"
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,240,0,400)
+frame.Size = UDim2.new(0,260,0,440)
 frame.Position = UDim2.new(0,20,0.3,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,50)
 Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
@@ -176,28 +176,46 @@ sb.MouseButton1Click:Connect(function()
     tpTo(summit,"Summit")
 end)
 
--- Slider offset stud
-local slider = Instance.new("TextButton", frame)
-slider.Size = UDim2.new(1,-20,0,30)
-slider.Position = UDim2.new(0,10,0,330)
-slider.BackgroundColor3 = Color3.fromRGB(150,150,80)
-slider.Text = "Offset Stud: "..offsetStud
-slider.MouseButton1Click:Connect(function()
+-- Tombol offset stud
+local studBtn = Instance.new("TextButton", frame)
+studBtn.Size = UDim2.new(1,-20,0,30)
+studBtn.Position = UDim2.new(0,10,0,330)
+studBtn.BackgroundColor3 = Color3.fromRGB(150,150,80)
+studBtn.Text = "Offset Stud: "..offsetStud
+studBtn.MouseButton1Click:Connect(function()
     offsetStud = offsetStud + 1
     if offsetStud > 20 then offsetStud = 10 end
-    slider.Text = "Offset Stud: "..offsetStud
+    studBtn.Text = "Offset Stud: "..offsetStud
 end)
 
--- Slider retryDelay
-local speedBtn = Instance.new("TextButton", frame)
-speedBtn.Size = UDim2.new(1,-20,0,30)
-speedBtn.Position = UDim2.new(0,10,0,370)
-speedBtn.BackgroundColor3 = Color3.fromRGB(80,180,200)
-speedBtn.Text = "Speed Delay: "..retryDelay.."s"
-speedBtn.MouseButton1Click:Connect(function()
-    retryDelay = retryDelay + 0.1
-    if retryDelay > 1 then retryDelay = 0.1 end
-    speedBtn.Text = string.format("Speed Delay: %.1fs", retryDelay)
+-- Tombol speed delay +/-
+local speedLabel = Instance.new("TextLabel", frame)
+speedLabel.Size = UDim2.new(0.6,-20,0,30)
+speedLabel.Position = UDim2.new(0,10,0,370)
+speedLabel.BackgroundTransparency = 1
+speedLabel.TextColor3 = Color3.new(1,1,1)
+speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
+
+local plusBtn = Instance.new("TextButton", frame)
+plusBtn.Size = UDim2.new(0.2,-5,0,30)
+plusBtn.Position = UDim2.new(0.6,0,0,370)
+plusBtn.BackgroundColor3 = Color3.fromRGB(100,180,100)
+plusBtn.Text = "+"
+
+local minusBtn = Instance.new("TextButton", frame)
+minusBtn.Size = UDim2.new(0.2,-5,0,30)
+minusBtn.Position = UDim2.new(0.8,0,0,370)
+minusBtn.BackgroundColor3 = Color3.fromRGB(180,100,100)
+minusBtn.Text = "-"
+
+plusBtn.MouseButton1Click:Connect(function()
+    retryDelay = math.clamp(retryDelay + 0.1,0.1,1)
+    speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
 end)
 
-notify("YARS Summit","Final Smart Auto Revisi ✅")
+minusBtn.MouseButton1Click:Connect(function()
+    retryDelay = math.clamp(retryDelay - 0.1,0.1,1)
+    speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
+end)
+
+notify("YARS Summit","Final Smart Auto Loaded ✅")
