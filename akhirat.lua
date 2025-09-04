@@ -14,7 +14,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- Koordinat CP & Summit
 local checkpoints = {
-    CFrame.new(135.182388, 419.724579, -220.798828),
+    -- CP1 Diperbarui:
+    CFrame.new(-134.886337, 419.735596, -220.92305),
+
     CFrame.new(3.00000501, 948.160339, -1054.29395),
     CFrame.new(108.989052, 1200.19873, -1359.28259),
     CFrame.new(102.756409, 1463.6759, -1807.98047),
@@ -138,7 +140,7 @@ local function autoSummitLoop()
                 if not autoSummitEnabled then break end
 
                 repeat
-                    teleportTo(cf, "CP"..i)
+                    teleportTo(cf, (i == #checkpoints) and "Summit" or ("CP"..i))
                     wait(loopDelay)
                 until cpValue.Value >= i or not autoSummitEnabled
             end
