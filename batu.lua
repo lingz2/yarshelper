@@ -20,7 +20,10 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    Summit = CFrame.new(408.080811, 3261.43188, -110.906059),
+    Summit = CFrame.new(408.080811, 3261.43188, -110.906059,
+        0.664278328, 3.246494276e-08, 0.74748534,
+        3.87810708e-08, 1, -7.789633836e-08,
+        -0.74748534, 8.073312336e-08, 0.664278328)
 }
 
 -- Remote
@@ -34,7 +37,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 420)
+main.Size = UDim2.new(0, 280, 0, 440)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -62,7 +65,7 @@ close.TextSize = 16
 close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -70)
+scroll.Size = UDim2.new(1, -10, 1, -80)
 scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
@@ -73,21 +76,36 @@ local list = Instance.new("UIListLayout", scroll)
 list.Padding = UDim.new(0,6)
 list.SortOrder = Enum.SortOrder.LayoutOrder
 
--- fungsi teleport
+-- Fungsi teleport
 local function tp(cf)
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     hrp.CFrame = cf
 end
 
--- fungsi trigger Summit asli
+-- Fungsi trigger Summit
 local function triggerSummit()
-    if SummitRemote and SummitRemote:IsA("RemoteEvent") then
-        SummitRemote:FireServer()
+    if SummitRemote then
+        if SummitRemote:IsA("RemoteEvent") then
+            SummitRemote:FireServer()
+        elseif SummitRemote:IsA("RemoteFunction") then
+            SummitRemote:InvokeServer()
+        end
     end
 end
 
--- tombol urut
+-- Fungsi panggil UpdateMDPL
+local function callUpdateMDPL()
+    if UpdateMDPL then
+        if UpdateMDPL:IsA("RemoteEvent") then
+            UpdateMDPL:FireServer()
+        elseif UpdateMDPL:IsA("RemoteFunction") then
+            UpdateMDPL:InvokeServer()
+        end
+    end
+end
+
+-- Tombol urut
 local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Update MDPL","Auto Summit"}
 
 local autoSummitRunning = false
@@ -98,9 +116,9 @@ for _,name in ipairs(order) do
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
     btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
-                        or (name=="Update MDPL") and Color3.fromRGB(60,160,100)
-                        or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
-                        or Color3.fromRGB(55,55,65)
+                            or (name=="Update MDPL") and Color3.fromRGB(60,160,100)
+                            or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
+                            or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 14
@@ -108,33 +126,29 @@ for _,name in ipairs(order) do
 
     btn.MouseButton1Click:Connect(function()
         if name=="Summit" then
+            tp(cps["Summit"])
+            task.wait(autoDelay)
             triggerSummit()
             tp(cps["cp1"])
         elseif name=="Update MDPL" then
-            if UpdateMDPL and UpdateMDPL:IsA("RemoteEvent") then
-                UpdateMDPL:FireServer()
-            end
+            callUpdateMDPL()
         elseif name=="Auto Summit" then
+            autoSummitRunning = not autoSummitRunning
+            btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
             if autoSummitRunning then
-                autoSummitRunning = false
-                btn.Text = "Auto Summit"
-            else
-                autoSummitRunning = true
-                btn.Text = "Stop Auto"
                 spawn(function()
                     while autoSummitRunning do
-                        for i=1, #order-3 do -- cp1-cp11
+                        for i=1,11 do
                             if not autoSummitRunning then break end
                             tp(cps["cp"..i])
                             task.wait(autoDelay)
                         end
                         if not autoSummitRunning then break end
                         tp(cps["Summit"])
+                        task.wait(autoDelay)
                         triggerSummit()
                         task.wait(autoDelay)
-                        if UpdateMDPL and UpdateMDPL:IsA("RemoteEvent") then
-                            UpdateMDPL:FireServer()
-                        end
+                        callUpdateMDPL()
                         tp(cps["cp1"])
                         task.wait(autoDelay)
                     end
@@ -146,7 +160,7 @@ for _,name in ipairs(order) do
     end)
 end
 
--- slider untuk delay
+-- Slider untuk delay
 local sliderLabel = Instance.new("TextLabel", main)
 sliderLabel.Size = UDim2.new(0.7,0,0,24)
 sliderLabel.Position = UDim2.new(0,10,1,-30)
@@ -166,7 +180,7 @@ slider.Font = Enum.Font.GothamSemibold
 slider.TextSize = 14
 Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
 
-slider.FocusLost:Connect(function(enter)
+slider.FocusLost:Connect(function()
     local val = tonumber(slider.Text)
     if val and val >= 0.1 and val <= 1 then
         autoDelay = val
