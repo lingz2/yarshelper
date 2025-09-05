@@ -1,7 +1,4 @@
 -- Gunung Batu Teleport GUI + Auto Summit + Sendsummit + Moveable
--- Delta Executor Ready
--- Tekan [M] untuk toggle GUI
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,7 +28,7 @@ local cps = {
 -- Remote
 local SendSummit = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SendSummit")
 
--- GUI
+-- GUI Setup
 local gui = Instance.new("ScreenGui")
 gui.Name = "GunungBatuTP"
 gui.ResetOnSpawn = false
@@ -112,7 +109,7 @@ for _,name in ipairs(order) do
     btn.MouseButton1Click:Connect(function()
         if name=="Summit" then
             tp(cps["Summit"])
-            task.wait(0.7)
+            task.wait(0.5)
             callSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
@@ -132,7 +129,7 @@ for _,name in ipairs(order) do
 
                         -- Puncak hijau
                         tp(cps["Summit"])
-                        task.wait(0.7)
+                        task.wait(0.5)
 
                         -- Spam SendSummit sampai stage bertambah
                         local leaderstats = player:WaitForChild("leaderstats")
@@ -144,7 +141,7 @@ for _,name in ipairs(order) do
                             task.wait(0.05)
                         until stage.Value > lastStage or not autoSummitRunning
 
-                        -- Lanjut ke CP2 lagi untuk loop berikutnya
+                        -- Kembali ke CP2 untuk loop berikutnya
                         tp(cps["cp2"])
                         task.wait(autoDelay)
                     end
