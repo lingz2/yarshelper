@@ -45,7 +45,7 @@ main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
 main.Active = true
-main.Draggable = true -- aktifkan drag
+main.Draggable = true
 
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1, -40, 0, 36)
@@ -96,9 +96,8 @@ local function triggerSummit()
     end
 end
 
--- Fungsi panggil UpdateMDPL (aman)
+-- Fungsi panggil UpdateMDPL
 local function callUpdateMDPL()
-    -- teleport dulu ke puncak supaya server menghitung MDPL
     tp(cps["Summit"])
     task.wait(0.2)
     if UpdateMDPL then
@@ -114,7 +113,7 @@ end
 local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Update MDPL","Auto Summit"}
 
 local autoSummitRunning = false
-local autoDelay = 0.5 -- default delay
+local autoDelay = 0.5
 
 for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
@@ -134,7 +133,7 @@ for _,name in ipairs(order) do
             tp(cps["Summit"])
             task.wait(autoDelay)
             triggerSummit()
-            tp(cps["cp1"])
+            -- tetap stay di kotak hijau
         elseif name=="Update MDPL" then
             callUpdateMDPL()
         elseif name=="Auto Summit" then
@@ -165,7 +164,7 @@ for _,name in ipairs(order) do
     end)
 end
 
--- Slider untuk delay
+-- Slider delay
 local sliderLabel = Instance.new("TextLabel", main)
 sliderLabel.Size = UDim2.new(0.7,0,0,24)
 sliderLabel.Position = UDim2.new(0,10,1,-30)
