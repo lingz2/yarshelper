@@ -20,10 +20,12 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    Summit = CFrame.new(408.080811, 3261.43188, -110.906059,
+    Summit = CFrame.new(
+        408.080811, 3261.43188, -110.906059,
         0.664278328, 3.246494276e-08, 0.74748534,
         3.87810708e-08, 1, -7.789633836e-08,
-        -0.74748534, 8.073312336e-08, 0.664278328)
+        -0.74748534, 8.073312336e-08, 0.664278328
+    )
 }
 
 -- Remote
@@ -94,8 +96,11 @@ local function triggerSummit()
     end
 end
 
--- Fungsi panggil UpdateMDPL
+-- Fungsi panggil UpdateMDPL (aman)
 local function callUpdateMDPL()
+    -- teleport dulu ke puncak supaya server menghitung MDPL
+    tp(cps["Summit"])
+    task.wait(0.2)
     if UpdateMDPL then
         if UpdateMDPL:IsA("RemoteEvent") then
             UpdateMDPL:FireServer()
