@@ -1,4 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit + Update MDPL + SendSummit + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit + SendSummit + Moveable
 -- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
@@ -20,7 +20,7 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    Summit = CFrame.new(
+    puncak = CFrame.new(
         408.080811, 3261.43188, -110.906059,
         0.664278328, 3.246494276e-08, 0.74748534,
         3.87810708e-08, 1, -7.789633836e-08,
@@ -29,9 +29,7 @@ local cps = {
 }
 
 -- Remote
-local UpdateMDPL = ReplicatedStorage:FindFirstChild("UpdateMDPL")
-local SummitRemote = ReplicatedStorage:FindFirstChild("Summit") or ReplicatedStorage:FindFirstChild("Finish")
-local SendSummit = ReplicatedStorage:FindFirstChild("SendSummit") -- remote dari RemoteSpy
+local SendSummit = ReplicatedStorage:FindFirstChild("SendSummit")
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -40,7 +38,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 480)
+main.Size = UDim2.new(0, 280, 0, 460)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -86,19 +84,8 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi trigger Summit
-local function triggerSummit()
-    if SummitRemote then
-        if SummitRemote:IsA("RemoteEvent") then
-            SummitRemote:FireServer()
-        elseif SummitRemote:IsA("RemoteFunction") then
-            SummitRemote:InvokeServer()
-        end
-    end
-end
-
--- Fungsi SendSummit
-local function triggerSendSummit()
+-- Fungsi panggil SendSummit
+local function callSendSummit()
     if SendSummit then
         if SendSummit:IsA("RemoteEvent") then
             SendSummit:FireServer()
@@ -108,25 +95,8 @@ local function triggerSendSummit()
     end
 end
 
--- Fungsi panggil UpdateMDPL
-local function callUpdateMDPL()
-    tp(cps["Summit"])
-    task.wait(0.2)
-    if UpdateMDPL then
-        if UpdateMDPL:IsA("RemoteEvent") then
-            UpdateMDPL:FireServer()
-        elseif UpdateMDPL:IsA("RemoteFunction") then
-            UpdateMDPL:InvokeServer()
-        end
-    end
-end
-
 -- Tombol urut
-local order = {
-    "cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11",
-    "Summit","Send Summit","Update MDPL","Auto Summit"
-}
-
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Puncak","SendSummit","Auto Summit"}
 local autoSummitRunning = false
 local autoDelay = 0.5
 
@@ -134,9 +104,8 @@ for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
-                            or (name=="Send Summit") and Color3.fromRGB(120,80,200)
-                            or (name=="Update MDPL") and Color3.fromRGB(60,160,100)
+    btn.BackgroundColor3 = (name=="Puncak") and Color3.fromRGB(100,60,160)
+                            or (name=="SendSummit") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -145,18 +114,10 @@ for _,name in ipairs(order) do
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        if name=="Summit" then
-            tp(cps["Summit"])
-            task.wait(autoDelay)
-            triggerSummit()
-            -- tetap stay di kotak hijau
-        elseif name=="Send Summit" then
-            tp(cps["Summit"])
-            task.wait(autoDelay)
-            triggerSendSummit()
-            -- tetap stay di kotak hijau
-        elseif name=="Update MDPL" then
-            callUpdateMDPL()
+        if name=="Puncak" then
+            tp(cps.puncak)
+        elseif name=="SendSummit" then
+            callSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
@@ -169,14 +130,10 @@ for _,name in ipairs(order) do
                             task.wait(autoDelay)
                         end
                         if not autoSummitRunning then break end
-                        tp(cps["Summit"])
+                        tp(cps.puncak)
                         task.wait(autoDelay)
-                        triggerSummit()
-                        task.wait(autoDelay)
-                        triggerSendSummit()
-                        task.wait(autoDelay)
-                        callUpdateMDPL()
-                        tp(cps["cp1"])
+                        callSendSummit()
+                        tp(cps.cp1)
                         task.wait(autoDelay)
                     end
                 end)
