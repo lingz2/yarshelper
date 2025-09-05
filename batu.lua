@@ -1,4 +1,7 @@
--- Gunung Batu Teleport + Auto Summit Akurat vFinal
+-- Gunung Batu Teleport GUI + Auto Summit + Sendsummit + Moveable
+-- Delta Executor Ready
+-- Tekan [M] untuk toggle GUI
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6,6 +9,7 @@ local player = Players.LocalPlayer
 
 -- Data CP
 local cps = {
+    cp1  = CFrame.new(-165.121399, 4.23206806, -657.757263),
     cp2  = CFrame.new(-121.60952, 8.50454998, 544.049377),
     cp3  = CFrame.new(-40.0167122, 392.432037, 673.959045),
     cp4  = CFrame.new(-296.999634, 484.432037, 779.003052),
@@ -16,12 +20,16 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    Summit = CFrame.new(408.080811, 3261.43188, -110.906059)
+    Summit = CFrame.new(
+        408.080811, 3261.43188, -110.906059,
+        0.664278328, 3.246494276e-08, 0.74748534,
+        3.87810708e-08, 1, -7.789633836e-08,
+        -0.74748534, 8.073312336e-08, 0.664278328
+    )
 }
 
--- Remote SendSummit
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local SendSummit = Remotes:WaitForChild("SendSummit")
+-- Remote
+local SendSummit = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SendSummit")
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -30,16 +38,17 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 400)
-main.Position = UDim2.new(0.05,0,0.2,0)
+main.Size = UDim2.new(0, 280, 0, 440)
+main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
+main.BorderSizePixel = 0
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
 main.Active = true
 main.Draggable = true
 
 local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,-40,0,36)
-title.Position = UDim2.new(0,10,0,0)
+title.Size = UDim2.new(1, -40, 0, 36)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.Text = "Gunung Batu Teleport"
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.BackgroundTransparency = 1
@@ -57,7 +66,7 @@ close.TextSize = 16
 close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1,-10,1,-70)
+scroll.Size = UDim2.new(1, -10, 1, -80)
 scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
@@ -75,50 +84,24 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi panggil SendSummit sampai tercatat
-local function sendSummitReliable()
-    local leaderstats = player:WaitForChild("leaderstats")
-    local stage = leaderstats:WaitForChild("Stage")
-    local lastStage = stage.Value
-    repeat
+-- Fungsi SendSummit
+local function callSendSummit()
+    if SendSummit then
         SendSummit:FireServer(1)
-        task.wait(0.05) -- spam cepat
-    until stage.Value > lastStage
-end
-
--- Auto Summit
-local autoSummitRunning = false
-local autoDelay = 0.5
-
-local function autoSummitLoop()
-    while autoSummitRunning do
-        -- mulai dari CP2
-        for i=2,11 do
-            if not autoSummitRunning then break end
-            tp(cps["cp"..i])
-            task.wait(autoDelay)
-        end
-        if not autoSummitRunning then break end
-
-        -- puncak hijau
-        tp(cps["Summit"])
-        task.wait(0.7) -- tunggu puncak
-        sendSummitReliable() -- pastikan tercatat
-        task.wait(0.1)
-        tp(cps["cp2"])
-        task.wait(autoDelay)
     end
 end
 
--- Tombol CP + Auto Summit
-local order = {"cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","SendSummit","Auto Summit"}
+-- Tombol urut
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Auto Summit"}
+
+local autoSummitRunning = false
+local autoDelay = 0.5
 
 for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
     btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
-                            or (name=="SendSummit") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -129,13 +112,43 @@ for _,name in ipairs(order) do
     btn.MouseButton1Click:Connect(function()
         if name=="Summit" then
             tp(cps["Summit"])
-        elseif name=="SendSummit" then
-            sendSummitReliable()
+            task.wait(0.7)
+            callSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
+
             if autoSummitRunning then
-                spawn(autoSummitLoop)
+                spawn(function()
+                    while autoSummitRunning do
+                        -- Loop CP2 - CP11
+                        for i=2,11 do
+                            if not autoSummitRunning then break end
+                            tp(cps["cp"..i])
+                            task.wait(autoDelay)
+                        end
+
+                        if not autoSummitRunning then break end
+
+                        -- Puncak hijau
+                        tp(cps["Summit"])
+                        task.wait(0.7)
+
+                        -- Spam SendSummit sampai stage bertambah
+                        local leaderstats = player:WaitForChild("leaderstats")
+                        local stage = leaderstats:WaitForChild("Stage")
+                        local lastStage = stage.Value
+
+                        repeat
+                            callSendSummit()
+                            task.wait(0.05)
+                        until stage.Value > lastStage or not autoSummitRunning
+
+                        -- Lanjut ke CP2 lagi untuk loop berikutnya
+                        tp(cps["cp2"])
+                        task.wait(autoDelay)
+                    end
+                end)
             end
         else
             tp(cps[name])
