@@ -1,33 +1,33 @@
--- Gunung Anurika Teleport & Auto Summit + Stylish GUI
--- Delta Executor Ready
-
+-- Gunung Anurika Ultimate Realistic Auto Summit
 local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
 local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 
--- CFrame tiap checkpoint
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- Checkpoints
 local CPs = {
-    ["CP1"] = CFrame.new(135.192032, 140.966553, -175.245834, -0.527359784, -2.354429766e-09, -0.849642098, 8.16806345e-10, 1, -3.27806338e-09, 0.849642098, -2.422711816e-09, -0.527359784),
-    ["CP2"] = CFrame.new(326.375885, 88.9806747, -433.956573, 0.76137346, 0, 0.648313582, 0, 1, 0, -0.648313582, 0, 0.76137346),
-    ["CP3"] = CFrame.new(475.910278, 168.998825, -939.516602, 0.999993205, 1.82620236e-08, 0.00368272397, -1.85378148e-08, 1, 7.485356692e-08, -0.00368272397, -7.49213314e-08, 0.999993205),
-    ["CP4"] = CFrame.new(930.097229, 132.571213, -626.028931, 0.647055387, 0, -0.762443006, 0, 1, 0, 0.762443006, 0, 0.647055387),
-    ["CP5"] = CFrame.new(923.416199, 100.85717, 279.597198, 0.812660992, 0, -0.582736731, 0, 1, 0, 0.582736731, 0, 0.812660992),
-    ["Summit"] = CFrame.new(250.567139, 318.749023, 674.083618, -0.736146212, -2.584927836e-08, 0.676822543, -7.11240622e-09, 1, 3.045629536e-08, -0.676822543, 1.76064496e-08, -0.736146212)
+    ["CP1"] = CFrame.new(135.192032, 140.966553, -175.245834),
+    ["CP2"] = CFrame.new(326.375885, 88.9806747, -433.956573),
+    ["CP3"] = CFrame.new(475.910278, 168.998825, -939.516602),
+    ["CP4"] = CFrame.new(930.097229, 132.571213, -626.028931),
+    ["CP5"] = CFrame.new(923.416199, 100.85717, 279.597198),
+    ["Summit"] = CFrame.new(250.567139, 318.749023, 674.083618)
 }
 
-local teleportSpeed = 0.5 -- default 0.5s
-local autoSummit = false
-local activeButton = nil
-
--- GUI utama
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-ScreenGui.Name = "GunungAnurikaGUI"
+ScreenGui.Name = "GunungAnurikaUltimateGUI"
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 240, 0, 360)
-MainFrame.Position = UDim2.new(0.7,0,0.3,0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-MainFrame.BackgroundTransparency = 0.2
+MainFrame.Size = UDim2.new(0, 320, 0, 550)
+MainFrame.Position = UDim2.new(0.7,0,0.25,0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+MainFrame.BackgroundTransparency = 0.15
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.BorderSizePixel = 0
@@ -36,7 +36,6 @@ local UIListLayout = Instance.new("UIListLayout", MainFrame)
 UIListLayout.Padding = UDim.new(0,5)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Warna tombol tiap CP
 local CPColors = {
     ["CP1"] = Color3.fromRGB(255,85,85),
     ["CP2"] = Color3.fromRGB(255,170,0),
@@ -46,7 +45,17 @@ local CPColors = {
     ["Summit"] = Color3.fromRGB(170,85,255)
 }
 
--- Fungsi membuat tombol
+-- Kontrol Variabel
+local CPButtons = {}
+local activeButton = nil
+local autoSummit = false
+local paused = false
+local waypointDelay = 0.3
+local walkSpeed = 16
+local currentWaypointIndex = 1
+local waypoints = {}
+
+-- Tombol Helper
 local function createButton(name, parent, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(1, -10, 0, 40)
@@ -60,20 +69,51 @@ local function createButton(name, parent, callback)
     return btn
 end
 
--- Fungsi teleport
-local function teleportTo(cframe)
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.CFrame = cframe
+-- Fungsi Realistik Ultimate
+local function moveToTarget(targetPosition)
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 5,
+        AgentCanJump = true,
+        AgentJumpHeight = 15,
+        AgentMaxSlope = 45
+    })
+    path:ComputeAsync(hrp.Position, targetPosition)
+    waypoints = path:GetWaypoints()
+    currentWaypointIndex = 1
+
+    while currentWaypointIndex <= #waypoints do
+        if paused then
+            wait(0.1)
+        else
+            local wp = waypoints[currentWaypointIndex]
+
+            local verticalDiff = wp.Position.Y - hrp.Position.Y
+
+            -- Lompat alami sesuai tinggi
+            if wp.Action == Enum.PathWaypointAction.Jump or verticalDiff > 2 then
+                humanoid.Jump = true
+            end
+
+            -- Tween smooth movement
+            humanoid.WalkSpeed = walkSpeed
+            local distance = (hrp.Position - wp.Position).Magnitude
+            local duration = math.clamp(distance / walkSpeed, 0.1, 1.5)
+            local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(wp.Position)})
+            tween:Play()
+            tween.Completed:Wait()
+
+            currentWaypointIndex = currentWaypointIndex + 1
+            wait(waypointDelay)
+        end
     end
 end
 
--- Buat tombol tiap CP
-local CPButtons = {}
+-- Tombol CP manual
 for cpName, cpCFrame in pairs(CPs) do
     CPButtons[cpName] = createButton(cpName, MainFrame, function()
-        teleportTo(cpCFrame)
-        -- Highlight tombol yang aktif
+        moveToTarget(cpCFrame.Position)
         if activeButton then activeButton.BorderSizePixel = 0 end
         local btn = CPButtons[cpName]
         btn.BorderSizePixel = 3
@@ -82,40 +122,36 @@ for cpName, cpCFrame in pairs(CPs) do
     end)
 end
 
--- Auto Summit Loop
-local AutoButton = Instance.new("TextButton", MainFrame)
-AutoButton.Size = UDim2.new(1, -10, 0, 40)
-AutoButton.Text = "Toggle Auto Summit"
-AutoButton.BackgroundColor3 = Color3.fromRGB(100,50,50)
-AutoButton.TextColor3 = Color3.fromRGB(255,255,255)
-AutoButton.Font = Enum.Font.SourceSansBold
-AutoButton.TextSize = 16
-AutoButton.BorderSizePixel = 0
-AutoButton.MouseButton1Click:Connect(function()
+-- Auto Summit
+local AutoButton = createButton("Toggle Auto Summit", MainFrame, function()
     autoSummit = not autoSummit
     AutoButton.Text = autoSummit and "Auto Summit: ON" or "Auto Summit: OFF"
     if autoSummit then
         spawn(function()
             while autoSummit do
                 for _, cpName in ipairs({"CP1","CP2","CP3","CP4","CP5","Summit"}) do
-                    teleportTo(CPs[cpName])
-                    -- Highlight tombol
+                    moveToTarget(CPs[cpName].Position)
                     if activeButton then activeButton.BorderSizePixel = 0 end
                     local btn = CPButtons[cpName]
                     btn.BorderSizePixel = 3
                     btn.BorderColor3 = Color3.fromRGB(255,255,255)
                     activeButton = btn
-                    wait(teleportSpeed)
                 end
             end
         end)
     end
 end)
 
--- Slider Speed
+-- Pause / Continue
+local PauseButton = createButton("Pause", MainFrame, function()
+    paused = not paused
+    PauseButton.Text = paused and "Continue" or "Pause"
+end)
+
+-- Slider WalkSpeed
 local SpeedLabel = Instance.new("TextLabel", MainFrame)
 SpeedLabel.Size = UDim2.new(1, -10, 0, 25)
-SpeedLabel.Text = string.format("Teleport Speed: %.2fs", teleportSpeed)
+SpeedLabel.Text = string.format("WalkSpeed: %.1f", walkSpeed)
 SpeedLabel.TextColor3 = Color3.fromRGB(255,255,255)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Font = Enum.Font.SourceSansBold
@@ -126,27 +162,22 @@ SpeedSlider.Size = UDim2.new(1, -10, 0, 25)
 SpeedSlider.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
 local SliderHandle = Instance.new("Frame", SpeedSlider)
-SliderHandle.Size = UDim2.new((teleportSpeed-0.1)/0.9, 0, 1, 0)
+SliderHandle.Size = UDim2.new((walkSpeed-8)/32,0,1,0)
 SliderHandle.BackgroundColor3 = Color3.fromRGB(200,200,200)
 
--- Fungsi drag slider
 local dragging = false
 SliderHandle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
 end)
 SliderHandle.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 RunService.RenderStepped:Connect(function()
     if dragging then
-        local mouseX = game.Players.LocalPlayer:GetMouse().X
+        local mouseX = player:GetMouse().X
         local pos = math.clamp(mouseX - SpeedSlider.AbsolutePosition.X, 0, SpeedSlider.AbsoluteSize.X)
-        SliderHandle.Size = UDim2.new(pos / SpeedSlider.AbsoluteSize.X, 0, 1, 0)
-        teleportSpeed = 0.1 + (0.9 * (pos / SpeedSlider.AbsoluteSize.X))
-        SpeedLabel.Text = string.format("Teleport Speed: %.2fs", teleportSpeed)
+        SliderHandle.Size = UDim2.new(pos / SpeedSlider.AbsoluteSize.X,0,1,0)
+        walkSpeed = 8 + 32*(pos/SpeedSlider.AbsoluteSize.X)
+        SpeedLabel.Text = string.format("WalkSpeed: %.1f", walkSpeed)
     end
 end)
