@@ -1,4 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit + SendSummit + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit + Moveable
 -- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
@@ -29,7 +29,7 @@ local cps = {
 }
 
 -- Remote
-local SendSummit = ReplicatedStorage:FindFirstChild("SendSummit")
+local SendSummit = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SendSummit")
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -38,7 +38,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 460)
+main.Size = UDim2.new(0, 280, 0, 440)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -66,7 +66,7 @@ close.TextSize = 16
 close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -100)
+scroll.Size = UDim2.new(1, -10, 1, -80)
 scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
@@ -84,19 +84,17 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi panggil SendSummit
-local function callSendSummit()
+-- Fungsi trigger SendSummit
+local function triggerSendSummit()
     if SendSummit then
-        if SendSummit:IsA("RemoteEvent") then
-            SendSummit:FireServer()
-        elseif SendSummit:IsA("RemoteFunction") then
-            SendSummit:InvokeServer()
-        end
+        local args = {1}
+        SendSummit:FireServer(unpack(args))
     end
 end
 
 -- Tombol urut
-local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Puncak","SendSummit","Auto Summit"}
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","Send Summit","Auto Summit"}
+
 local autoSummitRunning = false
 local autoDelay = 0.5
 
@@ -104,8 +102,8 @@ for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = (name=="Puncak") and Color3.fromRGB(100,60,160)
-                            or (name=="SendSummit") and Color3.fromRGB(60,160,100)
+    btn.BackgroundColor3 = (name=="puncak") and Color3.fromRGB(100,160,60)
+                            or (name=="Send Summit") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -114,10 +112,10 @@ for _,name in ipairs(order) do
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        if name=="Puncak" then
-            tp(cps.puncak)
-        elseif name=="SendSummit" then
-            callSendSummit()
+        if name=="puncak" then
+            tp(cps["puncak"])
+        elseif name=="Send Summit" then
+            triggerSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
@@ -130,10 +128,10 @@ for _,name in ipairs(order) do
                             task.wait(autoDelay)
                         end
                         if not autoSummitRunning then break end
-                        tp(cps.puncak)
+                        tp(cps["puncak"])
                         task.wait(autoDelay)
-                        callSendSummit()
-                        tp(cps.cp1)
+                        triggerSendSummit()
+                        tp(cps["cp1"])
                         task.wait(autoDelay)
                     end
                 end)
@@ -174,15 +172,15 @@ slider.FocusLost:Connect(function()
     end
 end)
 
--- update scroll size
+-- Update scroll size
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y+10)
 end)
 
--- close
+-- Close
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- toggle [M]
+-- Toggle [M]
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.M then
