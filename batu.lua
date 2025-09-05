@@ -1,4 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit + SendSummit + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit 100% Akurat
 -- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
@@ -20,10 +20,12 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    puncak = CFrame.new(408.080811, 3261.43188, -110.906059,
+    Summit = CFrame.new(
+        408.080811, 3261.43188, -110.906059,
         0.664278328, 3.246494276e-08, 0.74748534,
         3.87810708e-08, 1, -7.789633836e-08,
-        -0.74748534, 8.073312336e-08, 0.664278328)
+        -0.74748534, 8.073312336e-08, 0.664278328
+    )
 }
 
 -- Remote
@@ -36,7 +38,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 460)
+main.Size = UDim2.new(0, 280, 0, 420)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -64,7 +66,7 @@ close.TextSize = 16
 close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -100)
+scroll.Size = UDim2.new(1, -10, 1, -70)
 scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
@@ -82,16 +84,17 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi SendSummit
-local function triggerSendSummit()
-    if SendSummit and SendSummit:IsA("RemoteEvent") then
+-- Fungsi SendSummit reliable
+local function sendSummitReliable()
+    local lastStage = player:WaitForChild("leaderstats"):WaitForChild("Stage").Value
+    repeat
         SendSummit:FireServer(1)
-    end
+        task.wait(0.2)
+    until player.leaderstats.Stage.Value > lastStage
 end
 
 -- Tombol urut
-local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","SendSummit","Auto Summit"}
-
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Send Summit","Auto Summit"}
 local autoSummitRunning = false
 local autoDelay = 0.5
 
@@ -99,8 +102,8 @@ for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = (name=="puncak") and Color3.fromRGB(100,60,160)
-                            or (name=="SendSummit") and Color3.fromRGB(60,160,100)
+    btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
+                            or (name=="Send Summit") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -109,26 +112,24 @@ for _,name in ipairs(order) do
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        if name=="puncak" then
-            tp(cps["puncak"])
-        elseif name=="SendSummit" then
-            triggerSendSummit()
+        if name=="Summit" then
+            tp(cps["Summit"])
+        elseif name=="Send Summit" then
+            sendSummitReliable()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
             if autoSummitRunning then
                 spawn(function()
                     while autoSummitRunning do
-                        for i=1,11 do
-                            if not autoSummitRunning then break end
+                        for i=2,11 do  -- mulai CP2
                             tp(cps["cp"..i])
-                            task.wait(autoDelay) -- tunggu server simpan CP
+                            task.wait(autoDelay)
                         end
-                        if not autoSummitRunning then break end
-                        tp(cps["puncak"])
+                        tp(cps["Summit"])
                         task.wait(autoDelay)
-                        triggerSendSummit() -- tambah summit
-                        tp(cps["cp1"])
+                        sendSummitReliable()  -- pastikan summit bertambah
+                        tp(cps["cp2"])
                         task.wait(autoDelay)
                     end
                 end)
@@ -169,15 +170,15 @@ slider.FocusLost:Connect(function()
     end
 end)
 
--- Update scroll size
+-- update scroll size
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y+10)
 end)
 
--- Close
+-- close
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- Toggle [M]
+-- toggle [M]
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.M then
