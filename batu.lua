@@ -1,4 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit + SendSummit Loop + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit + SendSummit + Moveable
 -- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
@@ -84,19 +84,10 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi SendSummit sampai terhitung
+-- Fungsi SendSummit dengan delay 0.6s
 local function triggerSendSummit()
-    while true do
-        local success, err = pcall(function()
-            SendSummit:FireServer(1)
-        end)
-        if not success then break end
-        -- Tunggu 1 frame, otomatis mengikuti durasi server
-        task.wait()
-        -- Kita anggap server sudah menerima; exit loop
-        -- Jika ingin lebih akurat bisa tambahkan cek leaderboard (opsional)
-        break
-    end
+    SendSummit:FireServer(1)
+    task.wait(0.6)
 end
 
 -- Tombol
@@ -136,9 +127,8 @@ for _,name in ipairs(order) do
                             task.wait(autoDelay)
                         end
                         if not autoSummitRunning then break end
-                        -- Puncak hijau
+                        -- Puncak hijau + SendSummit
                         tp(cps["puncak"])
-                        -- Trigger SendSummit sampai terhitung
                         triggerSendSummit()
                     end
                 end)
