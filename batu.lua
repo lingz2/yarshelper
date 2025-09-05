@@ -1,4 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit + Update MDPL + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit + Update MDPL + SendSummit + Moveable
 -- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
@@ -31,6 +31,7 @@ local cps = {
 -- Remote
 local UpdateMDPL = ReplicatedStorage:FindFirstChild("UpdateMDPL")
 local SummitRemote = ReplicatedStorage:FindFirstChild("Summit") or ReplicatedStorage:FindFirstChild("Finish")
+local SendSummit = ReplicatedStorage:FindFirstChild("SendSummit") -- remote dari RemoteSpy
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -39,7 +40,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 440)
+main.Size = UDim2.new(0, 280, 0, 480)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -67,7 +68,7 @@ close.TextSize = 16
 close.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -80)
+scroll.Size = UDim2.new(1, -10, 1, -100)
 scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
@@ -96,6 +97,17 @@ local function triggerSummit()
     end
 end
 
+-- Fungsi SendSummit
+local function triggerSendSummit()
+    if SendSummit then
+        if SendSummit:IsA("RemoteEvent") then
+            SendSummit:FireServer()
+        elseif SendSummit:IsA("RemoteFunction") then
+            SendSummit:InvokeServer()
+        end
+    end
+end
+
 -- Fungsi panggil UpdateMDPL
 local function callUpdateMDPL()
     tp(cps["Summit"])
@@ -110,7 +122,10 @@ local function callUpdateMDPL()
 end
 
 -- Tombol urut
-local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Update MDPL","Auto Summit"}
+local order = {
+    "cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11",
+    "Summit","Send Summit","Update MDPL","Auto Summit"
+}
 
 local autoSummitRunning = false
 local autoDelay = 0.5
@@ -120,6 +135,7 @@ for _,name in ipairs(order) do
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
     btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
+                            or (name=="Send Summit") and Color3.fromRGB(120,80,200)
                             or (name=="Update MDPL") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
@@ -133,6 +149,11 @@ for _,name in ipairs(order) do
             tp(cps["Summit"])
             task.wait(autoDelay)
             triggerSummit()
+            -- tetap stay di kotak hijau
+        elseif name=="Send Summit" then
+            tp(cps["Summit"])
+            task.wait(autoDelay)
+            triggerSendSummit()
             -- tetap stay di kotak hijau
         elseif name=="Update MDPL" then
             callUpdateMDPL()
@@ -151,6 +172,8 @@ for _,name in ipairs(order) do
                         tp(cps["Summit"])
                         task.wait(autoDelay)
                         triggerSummit()
+                        task.wait(autoDelay)
+                        triggerSendSummit()
                         task.wait(autoDelay)
                         callUpdateMDPL()
                         tp(cps["cp1"])
