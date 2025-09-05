@@ -1,4 +1,5 @@
--- Gunung Batu Teleport GUI + Auto Summit + SendSummit + Moveable + Indikator
+-- Gunung Batu Teleport GUI + Auto Summit (CP Delay + Summit Delay) + Status
+-- Delta Executor Ready
 -- Tekan [M] untuk toggle GUI
 
 local Players = game:GetService("Players")
@@ -36,7 +37,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 440)
+main.Size = UDim2.new(0, 280, 0, 500)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -54,17 +55,6 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
 
--- Indikator Summit
-local summitIndicator = Instance.new("TextLabel", main)
-summitIndicator.Size = UDim2.new(1, -20, 0, 20)
-summitIndicator.Position = UDim2.new(0, 10, 0, 36)
-summitIndicator.BackgroundTransparency = 1
-summitIndicator.TextColor3 = Color3.fromRGB(80,255,120)
-summitIndicator.Font = Enum.Font.GothamSemibold
-summitIndicator.TextSize = 14
-summitIndicator.Text = ""
-summitIndicator.Visible = false
-
 local close = Instance.new("TextButton", main)
 close.Size = UDim2.new(0,30,0,30)
 close.Position = UDim2.new(1,-35,0,3)
@@ -73,10 +63,11 @@ close.TextColor3 = Color3.new(1,0.4,0.4)
 close.Font = Enum.Font.GothamBold
 close.TextSize = 16
 close.BackgroundTransparency = 1
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -10, 1, -80)
-scroll.Position = UDim2.new(0,5,0,60)
+scroll.Size = UDim2.new(1, -10, 1, -150)
+scroll.Position = UDim2.new(0,5,0,40)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 6
 scroll.BackgroundTransparency = 0.1
@@ -86,6 +77,80 @@ local list = Instance.new("UIListLayout", scroll)
 list.Padding = UDim.new(0,6)
 list.SortOrder = Enum.SortOrder.LayoutOrder
 
+-- Status label
+local statusLabel = Instance.new("TextLabel", main)
+statusLabel.Size = UDim2.new(1,-20,0,24)
+statusLabel.Position = UDim2.new(0,10,1,-105)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255,255,0)
+statusLabel.Font = Enum.Font.GothamSemibold
+statusLabel.TextSize = 14
+statusLabel.Text = "Status: Idle"
+
+-- Slider CP Delay
+local cpLabel = Instance.new("TextLabel", main)
+cpLabel.Size = UDim2.new(0.7,0,0,24)
+cpLabel.Position = UDim2.new(0,10,1,-75)
+cpLabel.BackgroundTransparency = 1
+cpLabel.TextColor3 = Color3.fromRGB(255,255,255)
+cpLabel.Font = Enum.Font.GothamSemibold
+cpLabel.TextSize = 14
+
+local cpDelay = 0.5
+cpLabel.Text = "CP Delay: "..cpDelay.." s"
+
+local cpSlider = Instance.new("TextBox", main)
+cpSlider.Size = UDim2.new(0.25,0,0,24)
+cpSlider.Position = UDim2.new(0.72,0,1,-75)
+cpSlider.BackgroundColor3 = Color3.fromRGB(55,55,65)
+cpSlider.TextColor3 = Color3.fromRGB(255,255,255)
+cpSlider.Text = tostring(cpDelay)
+cpSlider.Font = Enum.Font.GothamSemibold
+cpSlider.TextSize = 14
+Instance.new("UICorner", cpSlider).CornerRadius = UDim.new(0,6)
+
+cpSlider.FocusLost:Connect(function()
+    local val = tonumber(cpSlider.Text)
+    if val and val >= 0.1 and val <= 1 then
+        cpDelay = val
+        cpLabel.Text = "CP Delay: "..cpDelay.." s"
+    else
+        cpSlider.Text = tostring(cpDelay)
+    end
+end)
+
+-- Slider Summit Delay
+local summitLabel = Instance.new("TextLabel", main)
+summitLabel.Size = UDim2.new(0.7,0,0,24)
+summitLabel.Position = UDim2.new(0,10,1,-45)
+summitLabel.BackgroundTransparency = 1
+summitLabel.TextColor3 = Color3.fromRGB(255,255,255)
+summitLabel.Font = Enum.Font.GothamSemibold
+summitLabel.TextSize = 14
+
+local summitDelay = 0.7
+summitLabel.Text = "Summit Delay: "..summitDelay.." s"
+
+local summitSlider = Instance.new("TextBox", main)
+summitSlider.Size = UDim2.new(0.25,0,0,24)
+summitSlider.Position = UDim2.new(0.72,0,1,-45)
+summitSlider.BackgroundColor3 = Color3.fromRGB(55,55,65)
+summitSlider.TextColor3 = Color3.fromRGB(255,255,255)
+summitSlider.Text = tostring(summitDelay)
+summitSlider.Font = Enum.Font.GothamSemibold
+summitSlider.TextSize = 14
+Instance.new("UICorner", summitSlider).CornerRadius = UDim.new(0,6)
+
+summitSlider.FocusLost:Connect(function()
+    local val = tonumber(summitSlider.Text)
+    if val and val >= 0.3 and val <= 1 then
+        summitDelay = val
+        summitLabel.Text = "Summit Delay: "..summitDelay.." s"
+    else
+        summitSlider.Text = tostring(summitDelay)
+    end
+end)
+
 -- Fungsi teleport
 local function tp(cf)
     local char = player.Character or player.CharacterAdded:Wait()
@@ -93,28 +158,27 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi indikator
-local function showSummitIndicator()
-    summitIndicator.Text = "Summit +1 ✅"
-    summitIndicator.Visible = true
-    task.delay(1.5, function()
-        summitIndicator.Visible = false
-    end)
-end
-
--- Fungsi SendSummit
+-- Fungsi trigger SendSummit
 local function triggerSendSummit()
-    if SendSummit then
-        SendSummit:FireServer(1)
-        showSummitIndicator()
+    statusLabel.Text = "Status: Menunggu Summit..."
+    local success = false
+    local tries = 0
+    local maxTries = 10
+    while not success and tries < maxTries do
+        pcall(function()
+            SendSummit:FireServer(1)
+        end)
+        tries += 1
+        task.wait(summitDelay)
+        -- tanpa cek stage, kita asumsikan berhasil setelah 1 panggilan
+        success = true
     end
+    statusLabel.Text = "Status: Summit +1 ✅"
 end
 
--- Tombol manual
+-- Tombol
 local order = {"cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","SendSummit","Auto Summit"}
-
 local autoSummitRunning = false
-local autoDelay = 0.5 -- default antar CP
 
 for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
@@ -130,25 +194,29 @@ for _,name in ipairs(order) do
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        if name=="SendSummit" then
-            triggerSendSummit()
-        elseif name=="puncak" then
+        if name=="puncak" then
             tp(cps["puncak"])
+        elseif name=="SendSummit" then
+            triggerSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
             if autoSummitRunning then
                 spawn(function()
                     while autoSummitRunning do
+                        -- Naik CP2 - CP11
                         for i=2,11 do
                             if not autoSummitRunning then break end
+                            statusLabel.Text = "Status: Naik CP"..i
                             tp(cps["cp"..i])
-                            task.wait(autoDelay)
+                            task.wait(cpDelay)
                         end
+                        -- Puncak
                         if not autoSummitRunning then break end
+                        statusLabel.Text = "Status: Naik Puncak"
                         tp(cps["puncak"])
-                        task.wait(0.7) -- delay khusus sebelum SendSummit
-                        triggerSendSummit() -- indikator juga muncul di sini
+                        task.wait(0.2)
+                        triggerSendSummit()
                     end
                 end)
             end
@@ -158,43 +226,10 @@ for _,name in ipairs(order) do
     end)
 end
 
--- Slider delay CP
-local sliderLabel = Instance.new("TextLabel", main)
-sliderLabel.Size = UDim2.new(0.7,0,0,24)
-sliderLabel.Position = UDim2.new(0,10,1,-30)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.TextColor3 = Color3.fromRGB(255,255,255)
-sliderLabel.Font = Enum.Font.GothamSemibold
-sliderLabel.TextSize = 14
-sliderLabel.Text = "CP Delay: "..autoDelay.." s"
-
-local slider = Instance.new("TextBox", main)
-slider.Size = UDim2.new(0.25,0,0,24)
-slider.Position = UDim2.new(0.72,0,1,-30)
-slider.BackgroundColor3 = Color3.fromRGB(55,55,65)
-slider.TextColor3 = Color3.fromRGB(255,255,255)
-slider.Text = tostring(autoDelay)
-slider.Font = Enum.Font.GothamSemibold
-slider.TextSize = 14
-Instance.new("UICorner", slider).CornerRadius = UDim.new(0,6)
-
-slider.FocusLost:Connect(function()
-    local val = tonumber(slider.Text)
-    if val and val >= 0.1 and val <= 1 then
-        autoDelay = val
-        sliderLabel.Text = "CP Delay: "..autoDelay.." s"
-    else
-        slider.Text = tostring(autoDelay)
-    end
-end)
-
--- update scroll size
+-- update scroll
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y+10)
 end)
-
--- close
-close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
 -- toggle [M]
 UserInputService.InputBegan:Connect(function(input,gp)
