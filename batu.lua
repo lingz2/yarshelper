@@ -1,5 +1,4 @@
--- Gunung Batu Teleport GUI + Auto Summit (CP Delay + Summit Delay) + Status
--- Delta Executor Ready
+-- Gunung Batu Teleport GUI + Auto Summit (CP Delay + Summit Delay) + Status + Basecamp + Reset ke Basecamp
 -- Tekan [M] untuk toggle GUI
 
 local Players = game:GetService("Players")
@@ -9,6 +8,8 @@ local player = Players.LocalPlayer
 
 -- Data CP
 local cps = {
+    basecamp = CFrame.new(-180.2, 5.5, 400.3), -- koordinat basecamp (spawn awal)
+    cp1  = CFrame.new(-158.393387, 7.3529253, 431.740173),
     cp2  = CFrame.new(-121.60952, 8.50454998, 544.049377),
     cp3  = CFrame.new(-40.0167122, 392.432037, 673.959045),
     cp4  = CFrame.new(-296.999634, 484.432037, 779.003052),
@@ -37,7 +38,7 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 280, 0, 500)
+main.Size = UDim2.new(0, 280, 0, 520)
 main.Position = UDim2.new(0.05, 0, 0.2, 0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,35)
 main.BorderSizePixel = 0
@@ -170,21 +171,21 @@ local function triggerSendSummit()
         end)
         tries += 1
         task.wait(summitDelay)
-        -- tanpa cek stage, kita asumsikan berhasil setelah 1 panggilan
         success = true
     end
     statusLabel.Text = "Status: Summit +1 ✅"
 end
 
 -- Tombol
-local order = {"cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","SendSummit","Auto Summit"}
+local order = {"basecamp","cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","SendSummit","Auto Summit"}
 local autoSummitRunning = false
 
 for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = (name=="puncak") and Color3.fromRGB(100,60,160)
+    btn.BackgroundColor3 = (name=="basecamp") and Color3.fromRGB(100,140,200)
+                            or (name=="puncak") and Color3.fromRGB(100,60,160)
                             or (name=="SendSummit") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
@@ -204,8 +205,13 @@ for _,name in ipairs(order) do
             if autoSummitRunning then
                 spawn(function()
                     while autoSummitRunning do
-                        -- Naik CP2 - CP11
-                        for i=2,11 do
+                        -- Balik Basecamp dulu
+                        statusLabel.Text = "Status: Reset ke Basecamp"
+                        tp(cps["basecamp"])
+                        task.wait(cpDelay)
+
+                        -- Naik CP1 - CP11
+                        for i=1,11 do
                             if not autoSummitRunning then break end
                             statusLabel.Text = "Status: Naik CP"..i
                             tp(cps["cp"..i])
