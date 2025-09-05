@@ -1,4 +1,7 @@
--- Gunung Batu Teleport GUI + Auto Summit + Sendsummit + Moveable
+-- Gunung Batu Teleport GUI + Auto Summit (Final)
+-- Delta Executor Ready
+-- Tekan [M] untuk toggle GUI
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,7 +20,7 @@ local cps = {
     cp9  = CFrame.new(332.142334, 1736.43201, -260.883789),
     cp10 = CFrame.new(290.354126, 1979.03186, -203.905533),
     cp11 = CFrame.new(616.488281, 3260.50879, -66.2258759),
-    Summit = CFrame.new(
+    puncak = CFrame.new(
         408.080811, 3261.43188, -110.906059,
         0.664278328, 3.246494276e-08, 0.74748534,
         3.87810708e-08, 1, -7.789633836e-08,
@@ -28,7 +31,7 @@ local cps = {
 -- Remote
 local SendSummit = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SendSummit")
 
--- GUI Setup
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "GunungBatuTP"
 gui.ResetOnSpawn = false
@@ -81,24 +84,28 @@ local function tp(cf)
     hrp.CFrame = cf
 end
 
--- Fungsi SendSummit
-local function callSendSummit()
-    if SendSummit then
-        SendSummit:FireServer(1)
+-- Fungsi SendSummit (spam hingga server terima)
+local function doSendSummit()
+    for i=1,10 do -- spam 10x cukup cepat
+        pcall(function()
+            SendSummit:FireServer(1)
+        end)
+        task.wait(0.05)
     end
 end
 
 -- Tombol urut
-local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","Summit","Auto Summit"}
+local order = {"cp1","cp2","cp3","cp4","cp5","cp6","cp7","cp8","cp9","cp10","cp11","puncak","Auto Summit"}
 
 local autoSummitRunning = false
-local autoDelay = 0.5
+local autoDelay = 0.3 -- default CP delay
+local puncakDelay = 0.5 -- delay puncak hijau
 
 for _,name in ipairs(order) do
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-10,0,36)
     btn.Text = name
-    btn.BackgroundColor3 = (name=="Summit") and Color3.fromRGB(100,60,160)
+    btn.BackgroundColor3 = (name=="puncak") and Color3.fromRGB(60,160,100)
                             or (name=="Auto Summit") and Color3.fromRGB(160,100,60)
                             or Color3.fromRGB(55,55,65)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -107,43 +114,25 @@ for _,name in ipairs(order) do
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
     btn.MouseButton1Click:Connect(function()
-        if name=="Summit" then
-            tp(cps["Summit"])
-            task.wait(0.5)
-            callSendSummit()
+        if name=="puncak" then
+            tp(cps["puncak"])
+            task.wait(puncakDelay)
+            doSendSummit()
         elseif name=="Auto Summit" then
             autoSummitRunning = not autoSummitRunning
             btn.Text = autoSummitRunning and "Stop Auto" or "Auto Summit"
-
             if autoSummitRunning then
                 spawn(function()
                     while autoSummitRunning do
-                        -- Loop CP2 - CP11
                         for i=2,11 do
                             if not autoSummitRunning then break end
                             tp(cps["cp"..i])
                             task.wait(autoDelay)
                         end
-
                         if not autoSummitRunning then break end
-
-                        -- Puncak hijau
-                        tp(cps["Summit"])
-                        task.wait(0.5)
-
-                        -- Spam SendSummit sampai stage bertambah
-                        local leaderstats = player:WaitForChild("leaderstats")
-                        local stage = leaderstats:WaitForChild("Stage")
-                        local lastStage = stage.Value
-
-                        repeat
-                            callSendSummit()
-                            task.wait(0.05)
-                        until stage.Value > lastStage or not autoSummitRunning
-
-                        -- Kembali ke CP2 untuk loop berikutnya
-                        tp(cps["cp2"])
-                        task.wait(autoDelay)
+                        tp(cps["puncak"])
+                        task.wait(puncakDelay)
+                        doSendSummit()
                     end
                 end)
             end
@@ -153,7 +142,7 @@ for _,name in ipairs(order) do
     end)
 end
 
--- Slider delay
+-- Slider delay CP
 local sliderLabel = Instance.new("TextLabel", main)
 sliderLabel.Size = UDim2.new(0.7,0,0,24)
 sliderLabel.Position = UDim2.new(0,10,1,-30)
@@ -161,7 +150,7 @@ sliderLabel.BackgroundTransparency = 1
 sliderLabel.TextColor3 = Color3.fromRGB(255,255,255)
 sliderLabel.Font = Enum.Font.GothamSemibold
 sliderLabel.TextSize = 14
-sliderLabel.Text = "Delay: "..autoDelay.." s"
+sliderLabel.Text = "Delay CP: "..autoDelay.." s"
 
 local slider = Instance.new("TextBox", main)
 slider.Size = UDim2.new(0.25,0,0,24)
@@ -177,21 +166,21 @@ slider.FocusLost:Connect(function()
     local val = tonumber(slider.Text)
     if val and val >= 0.1 and val <= 1 then
         autoDelay = val
-        sliderLabel.Text = "Delay: "..autoDelay.." s"
+        sliderLabel.Text = "Delay CP: "..autoDelay.." s"
     else
         slider.Text = tostring(autoDelay)
     end
 end)
 
--- update scroll size
+-- Update scroll size
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0,0,0,list.AbsoluteContentSize.Y+10)
 end)
 
--- close
+-- Close
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- toggle [M]
+-- Toggle [M]
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.M then
