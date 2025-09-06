@@ -1,6 +1,6 @@
--- YARS AUTO SUMMIT GUI
--- CP1-CP5 > Summit > Respawn > Loop
--- Delay Control (0.1s - 1s)
+-- YARS AUTO SUMMIT GUI (Final Version)
+-- CP1-CP5 -> Summit -> Respawn -> Basecamp -> Loop
+-- Delay Control 0.1s - 1s
 
 if game.CoreGui:FindFirstChild("YARS_SUMMIT_GUI") then
     game.CoreGui:FindFirstChild("YARS_SUMMIT_GUI"):Destroy()
@@ -8,7 +8,6 @@ end
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local humanoid = player.Character:WaitForChild("Humanoid")
 
 -- CP & Summit CFrames
 local checkpoints = {
@@ -25,7 +24,7 @@ local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "YARS_SUMMIT_GUI"
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 350)
+Frame.Size = UDim2.new(0, 250, 0, 380)
 Frame.Position = UDim2.new(0.05, 0, 0.25, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BackgroundTransparency = 0.1
@@ -104,14 +103,18 @@ local function AutoSummit()
     AutoBtn.BackgroundColor3 = Color3.fromRGB(20,80,20)
 
     while loopRunning do
+        -- CP1 sampai Summit
         for i = 1, #checkpoints do
             local char = player.Character or player.CharacterAdded:Wait()
             char:WaitForChild("HumanoidRootPart").CFrame = checkpoints[i]
             task.wait(delayTime)
         end
-        -- Respawn (tanpa mati)
+
+        -- Respawn (reset summit, spawn ke basecamp)
         player:LoadCharacter()
-        task.wait(2) -- jeda setelah respawn
+        task.wait(3) -- tunggu respawn selesai
+
+        -- setelah respawn, otomatis loop ulang dari CP1
     end
 end
 
