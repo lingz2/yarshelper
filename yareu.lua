@@ -1,10 +1,9 @@
--- AUTO SUMMIT LOOP (MODERN UI)
+-- AUTO SUMMIT LOOP (RESPAWN + PERSISTENT GUI)
 -- By Yars
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
+local UIS = game:GetService("UserInputService")
 
 -- CFrame Summit
 local SummitCF = CFrame.new(
@@ -14,11 +13,10 @@ local SummitCF = CFrame.new(
     0.948464334, -5.867133622e-08, -0.316883892
 )
 
--- Spawn / Respawn Point
-local SpawnCF = CFrame.new(workspace.SpawnLocation.Position + Vector3.new(0,5,0))
-
--- GUI
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- Buat GUI di CoreGui (biar nggak hilang saat respawn)
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.Parent = game:GetService("CoreGui")
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,250,0,120)
@@ -27,10 +25,7 @@ frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
-
--- Rounded corner
-local UICorner = Instance.new("UICorner", frame)
-UICorner.CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
 -- Title
 local title = Instance.new("TextLabel", frame)
@@ -79,15 +74,26 @@ sliderLabel.TextSize = 14
 -- Variabel
 local running = false
 local delayTime = 0.5
-local UIS = game:GetService("UserInputService")
+local dragging = false
 
--- Auto Summit Loop
+-- Fungsi Auto Summit
 local function autoSummit()
     while running do
+        -- pastikan karakter ada
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        -- teleport ke summit
         hrp.CFrame = SummitCF
         task.wait(0.2)
-        hrp.CFrame = SpawnCF
-        task.wait(delayTime)
+
+        -- respawn (kill humanoid)
+        local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+
+        task.wait(delayTime) -- jeda antar loop
     end
 end
 
@@ -102,8 +108,6 @@ toggle.MouseButton1Click:Connect(function()
 end)
 
 -- Drag Slider Knob
-local dragging = false
-
 knob.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -123,6 +127,8 @@ UIS.InputChanged:Connect(function(input)
         local mousePos = math.clamp((input.Position.X - barAbsPos)/barAbsSize,0,1)
 
         knob.Position = UDim2.new(mousePos, -10, -0.5, 0)
+
+        -- mapping 0.1s → 1s
         delayTime = 0.1 + (0.9 * mousePos)
         sliderLabel.Text = "Delay: "..string.format("%.2f",delayTime).."s"
     end
