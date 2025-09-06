@@ -3,9 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
 
 -- Remote & Argumen Hard
 local RF_GetLevel = ReplicatedStorage:WaitForChild("LevelService"):WaitForChild("RF_GetLevel")
@@ -26,19 +24,17 @@ ScreenGui.Name = "AutoSummitGUI"
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 220, 0, 140)
 Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
 Frame.BackgroundTransparency = 0.1
-Frame.ClipsDescendants = true
-Frame.UICorner = Instance.new("UICorner", Frame)
-Frame.UICorner.CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
 
 local title = Instance.new("TextLabel", Frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Text = "🏔️ Auto Summit Hard"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextColor3 = Color3.fromRGB(255, 215, 0) -- emas
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -59,9 +55,8 @@ startBtn.Text = "▶️ Start"
 startBtn.Font = Enum.Font.GothamBold
 startBtn.TextSize = 14
 startBtn.TextColor3 = Color3.new(1,1,1)
-startBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 90)
-startBtn.UICorner = Instance.new("UICorner", startBtn)
-startBtn.UICorner.CornerRadius = UDim.new(0, 8)
+startBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- hijau cerah
+Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 8)
 
 local stopBtn = Instance.new("TextButton", Frame)
 stopBtn.Position = UDim2.new(0.55, 0, 0.5, 0)
@@ -70,9 +65,8 @@ stopBtn.Text = "⏹ Stop"
 stopBtn.Font = Enum.Font.GothamBold
 stopBtn.TextSize = 14
 stopBtn.TextColor3 = Color3.new(1,1,1)
-stopBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-stopBtn.UICorner = Instance.new("UICorner", stopBtn)
-stopBtn.UICorner.CornerRadius = UDim.new(0, 8)
+stopBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- merah terang
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 8)
 
 local delayLbl = Instance.new("TextLabel", Frame)
 delayLbl.Position = UDim2.new(0,0,0.8,0)
@@ -90,8 +84,8 @@ plusBtn.Text = "+"
 plusBtn.Font = Enum.Font.GothamBold
 plusBtn.TextSize = 14
 plusBtn.TextColor3 = Color3.new(1,1,1)
-plusBtn.BackgroundColor3 = Color3.fromRGB(80,160,250)
-plusBtn.UICorner = Instance.new("UICorner", plusBtn)
+plusBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- biru terang
+Instance.new("UICorner", plusBtn)
 
 local minusBtn = Instance.new("TextButton", Frame)
 minusBtn.Position = UDim2.new(0.45,0,0.8,0)
@@ -100,8 +94,8 @@ minusBtn.Text = "-"
 minusBtn.Font = Enum.Font.GothamBold
 minusBtn.TextSize = 14
 minusBtn.TextColor3 = Color3.new(1,1,1)
-minusBtn.BackgroundColor3 = Color3.fromRGB(80,160,250)
-minusBtn.UICorner = Instance.new("UICorner", minusBtn)
+minusBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- biru terang
+Instance.new("UICorner", minusBtn)
 
 -- Fungsi Loop Summit
 local function doSummit()
@@ -114,9 +108,9 @@ local function doSummit()
         task.wait(0.3)
 
         -- teleport ke puncak
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            player.Character:MoveTo(summitCF.Position)
-            player.Character.HumanoidRootPart.CFrame = summitCF
+        local char = player.Character or player.CharacterAdded:Wait()
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = summitCF
         end
 
         task.wait(delayTime)
@@ -128,12 +122,12 @@ local function doSummit()
     end
 end
 
--- Button Action
+-- Tombol
 startBtn.MouseButton1Click:Connect(function()
     if not running then
         running = true
         status.Text = "Status: ✅ ON"
-        status.TextColor3 = Color3.fromRGB(100,255,100)
+        status.TextColor3 = Color3.fromRGB(50, 255, 100)
         task.spawn(doSummit)
     end
 end)
@@ -141,7 +135,7 @@ end)
 stopBtn.MouseButton1Click:Connect(function()
     running = false
     status.Text = "Status: ❌ OFF"
-    status.TextColor3 = Color3.fromRGB(255,80,80)
+    status.TextColor3 = Color3.fromRGB(255, 80, 80)
 end)
 
 plusBtn.MouseButton1Click:Connect(function()
