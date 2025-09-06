@@ -1,4 +1,4 @@
---// AUTO SUMMIT HARD MODE + INVISIBLE TOGGLE (Delta Executor Mobile Ready)
+--// AUTO SUMMIT HARD MODE + INVISIBLE TOGGLE
 --// Dibuat oleh Yars
 
 local Players = game:GetService("Players")
@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local RF_GetLevel = ReplicatedStorage:WaitForChild("LevelService"):WaitForChild("RF_GetLevel")
 local HardID = 9349848927
 
--- CFrame Summit
+-- CFrame Summit (Hard)
 local summitCF = CFrame.new(
     -910.277771, 3142.12842, 562.343323,
     0.921977043, -4.37947945e-09, 0.387244552,
@@ -120,27 +120,6 @@ plusBtn.TextColor3 = Color3.new(1,1,1)
 plusBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 Instance.new("UICorner", plusBtn)
 
--- Fungsi Summit
-local function doSummit()
-    while running do
-        pcall(function()
-            RF_GetLevel:InvokeServer(HardID)
-        end)
-
-        task.wait(0.3)
-
-        local char = player.Character or player.CharacterAdded:Wait()
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = summitCF
-        end
-
-        task.wait(delayTime)
-
-        player:LoadCharacter()
-        task.wait(delayTime)
-    end
-end
-
 -- Fungsi Invisible
 local function applyInvisible(char)
     if not char then return end
@@ -176,7 +155,38 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Tombol
+-- Fungsi Summit Loop (dengan respawn asli)
+local function doSummit()
+    while running do
+        -- pilih level Hard
+        pcall(function()
+            RF_GetLevel:InvokeServer(HardID)
+        end)
+
+        task.wait(0.3)
+
+        -- teleport summit
+        local char = player.Character or player.CharacterAdded:Wait()
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = summitCF
+        end
+
+        task.wait(delayTime)
+
+        -- respawn
+        player:LoadCharacter()
+        local newChar = player.CharacterAdded:Wait()
+        task.wait(0.5)
+
+        if invisible then
+            applyInvisible(newChar)
+        end
+
+        task.wait(delayTime)
+    end
+end
+
+-- Tombol GUI
 startBtn.MouseButton1Click:Connect(function()
     if not running then
         running = true
