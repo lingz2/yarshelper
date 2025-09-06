@@ -1,4 +1,4 @@
--- AUTO SUMMIT LOOP (TOMBOL + / - DELAY)
+-- AUTO SUMMIT LOOP (TOMBOL + / - DELAY, RANGE 0.1s - 5s)
 -- By Yars
 
 local Players = game:GetService("Players")
@@ -81,6 +81,7 @@ Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,8)
 -- Variabel
 local running = false
 local delayTime = 0.5
+local MIN_DELAY, MAX_DELAY = 0.1, 5.0
 
 -- Fungsi Auto Summit
 local function autoSummit()
@@ -115,11 +116,11 @@ end)
 
 -- Tombol + dan - Delay
 plusBtn.MouseButton1Click:Connect(function()
-    delayTime = math.clamp(delayTime + 0.1, 0.1, 1.0)
+    delayTime = math.clamp(delayTime + 0.1, MIN_DELAY, MAX_DELAY)
     delayLabel.Text = "Delay: "..string.format("%.1f",delayTime).."s"
 end)
 
 minusBtn.MouseButton1Click:Connect(function()
-    delayTime = math.clamp(delayTime - 0.1, 0.1, 1.0)
+    delayTime = math.clamp(delayTime - 0.1, MIN_DELAY, MAX_DELAY)
     delayLabel.Text = "Delay: "..string.format("%.1f",delayTime).."s"
 end)
