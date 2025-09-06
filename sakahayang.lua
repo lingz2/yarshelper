@@ -1,4 +1,4 @@
---// AUTO SUMMIT HARD MODE + INVISIBLE TOGGLE
+--// AUTO SUMMIT HARD MODE + INVISIBLE TOGGLE + COUNTER
 --// Dibuat oleh Yars
 
 local Players = game:GetService("Players")
@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local RF_GetLevel = ReplicatedStorage:WaitForChild("LevelService"):WaitForChild("RF_GetLevel")
 local HardID = 9349848927
 
--- CFrame Summit (Hard)
+-- CFrame Summit
 local summitCF = CFrame.new(
     -910.277771, 3142.12842, 562.343323,
     0.921977043, -4.37947945e-09, 0.387244552,
@@ -22,6 +22,7 @@ local running = false
 local delayTime = 1
 local minDelay, maxDelay = 0.1, 5
 local invisible = false
+local summitCount = 0
 
 -- GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -30,7 +31,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 240, 0, 200)
+Frame.Size = UDim2.new(0, 240, 0, 230)
 Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
@@ -54,6 +55,15 @@ status.TextColor3 = Color3.fromRGB(255, 80, 80)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
 status.TextSize = 14
+
+local counterLbl = Instance.new("TextLabel", Frame)
+counterLbl.Position = UDim2.new(0,0,0,55)
+counterLbl.Size = UDim2.new(1,0,0,25)
+counterLbl.Text = "Summit Count: 0"
+counterLbl.TextColor3 = Color3.fromRGB(100,200,255)
+counterLbl.BackgroundTransparency = 1
+counterLbl.Font = Enum.Font.Gotham
+counterLbl.TextSize = 14
 
 -- Tombol Start
 local startBtn = Instance.new("TextButton", Frame)
@@ -155,7 +165,7 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Fungsi Summit Loop (dengan respawn asli)
+-- Fungsi Summit Loop (respawn asli)
 local function doSummit()
     while running do
         -- pilih level Hard
@@ -171,7 +181,8 @@ local function doSummit()
             char.HumanoidRootPart.CFrame = summitCF
         end
 
-        task.wait(delayTime)
+        -- tunggu minimal 1 detik biar summit tercatat
+        task.wait(math.max(1, delayTime))
 
         -- respawn
         player:LoadCharacter()
@@ -181,6 +192,9 @@ local function doSummit()
         if invisible then
             applyInvisible(newChar)
         end
+
+        summitCount += 1
+        counterLbl.Text = "Summit Count: "..summitCount
 
         task.wait(delayTime)
     end
