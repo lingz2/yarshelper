@@ -1,9 +1,8 @@
--- AUTO SUMMIT LOOP (RESPAWN + PERSISTENT GUI)
+-- AUTO SUMMIT LOOP (TOMBOL + / - DELAY)
 -- By Yars
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
 
 -- CFrame Summit
 local SummitCF = CFrame.new(
@@ -13,13 +12,13 @@ local SummitCF = CFrame.new(
     0.948464334, -5.867133622e-08, -0.316883892
 )
 
--- Buat GUI di CoreGui (biar nggak hilang saat respawn)
+-- GUI (CoreGui biar nggak hilang saat respawn)
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("CoreGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,250,0,120)
+frame.Size = UDim2.new(0,250,0,140)
 frame.Position = UDim2.new(0.05,0,0.25,0)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
@@ -47,34 +46,41 @@ toggle.Font = Enum.Font.GothamBold
 toggle.TextSize = 18
 Instance.new("UICorner", toggle).CornerRadius = UDim.new(0,10)
 
--- Slider bar
-local sliderBar = Instance.new("Frame", frame)
-sliderBar.Size = UDim2.new(0.9,0,0,10)
-sliderBar.Position = UDim2.new(0.05,0,0.7,0)
-sliderBar.BackgroundColor3 = Color3.fromRGB(60,60,60)
-Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0,8)
+-- Delay Label
+local delayLabel = Instance.new("TextLabel", frame)
+delayLabel.Size = UDim2.new(1,0,0,25)
+delayLabel.Position = UDim2.new(0,0,0.55,0)
+delayLabel.BackgroundTransparency = 1
+delayLabel.Text = "Delay: 0.5s"
+delayLabel.TextColor3 = Color3.fromRGB(255,255,255)
+delayLabel.Font = Enum.Font.Gotham
+delayLabel.TextSize = 14
 
--- Slider knob
-local knob = Instance.new("Frame", sliderBar)
-knob.Size = UDim2.new(0,20,0,20)
-knob.Position = UDim2.new(0,0,-0.5,0)
-knob.BackgroundColor3 = Color3.fromRGB(200,200,200)
-Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+-- Tombol -
+local minusBtn = Instance.new("TextButton", frame)
+minusBtn.Size = UDim2.new(0.4,0,0,30)
+minusBtn.Position = UDim2.new(0.05,0,0.75,0)
+minusBtn.Text = "- Delay"
+minusBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
+minusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minusBtn.Font = Enum.Font.GothamBold
+minusBtn.TextSize = 14
+Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0,8)
 
--- Slider label
-local sliderLabel = Instance.new("TextLabel", frame)
-sliderLabel.Size = UDim2.new(1,0,0,20)
-sliderLabel.Position = UDim2.new(0,0,0.85,0)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.Text = "Delay: 0.5s"
-sliderLabel.TextColor3 = Color3.fromRGB(255,255,255)
-sliderLabel.Font = Enum.Font.Gotham
-sliderLabel.TextSize = 14
+-- Tombol +
+local plusBtn = Instance.new("TextButton", frame)
+plusBtn.Size = UDim2.new(0.4,0,0,30)
+plusBtn.Position = UDim2.new(0.55,0,0.75,0)
+plusBtn.Text = "+ Delay"
+plusBtn.BackgroundColor3 = Color3.fromRGB(60,180,220)
+plusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+plusBtn.Font = Enum.Font.GothamBold
+plusBtn.TextSize = 14
+Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,8)
 
 -- Variabel
 local running = false
 local delayTime = 0.5
-local dragging = false
 
 -- Fungsi Auto Summit
 local function autoSummit()
@@ -93,7 +99,7 @@ local function autoSummit()
             humanoid.Health = 0
         end
 
-        task.wait(delayTime) -- jeda antar loop
+        task.wait(delayTime)
     end
 end
 
@@ -107,29 +113,13 @@ toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Drag Slider Knob
-knob.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
+-- Tombol + dan - Delay
+plusBtn.MouseButton1Click:Connect(function()
+    delayTime = math.clamp(delayTime + 0.1, 0.1, 1.0)
+    delayLabel.Text = "Delay: "..string.format("%.1f",delayTime).."s"
 end)
 
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local barAbsSize = sliderBar.AbsoluteSize.X
-        local barAbsPos = sliderBar.AbsolutePosition.X
-        local mousePos = math.clamp((input.Position.X - barAbsPos)/barAbsSize,0,1)
-
-        knob.Position = UDim2.new(mousePos, -10, -0.5, 0)
-
-        -- mapping 0.1s → 1s
-        delayTime = 0.1 + (0.9 * mousePos)
-        sliderLabel.Text = "Delay: "..string.format("%.2f",delayTime).."s"
-    end
+minusBtn.MouseButton1Click:Connect(function()
+    delayTime = math.clamp(delayTime - 0.1, 0.1, 1.0)
+    delayLabel.Text = "Delay: "..string.format("%.1f",delayTime).."s"
 end)
