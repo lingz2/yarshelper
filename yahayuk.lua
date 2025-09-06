@@ -1,4 +1,5 @@
--- YARS AUTO SUMMIT GUI (FINAL SUPER + NOTIF & COUNTER + POPUP TOAST)
+-- YARS AUTO SUMMIT GUI (FINAL + MODE RESPAWN)
+-- CP1-5 -> Summit -> Respawn (Mati/Load) -> Basecamp -> Loop
 
 if game.CoreGui:FindFirstChild("YARS_SUMMIT_GUI") then
     game.CoreGui:FindFirstChild("YARS_SUMMIT_GUI"):Destroy()
@@ -14,7 +15,8 @@ local checkpoints = {
     CFrame.new(287.950012, 428.691956, 503.687042, -1.19209275e-07, 0, -1, 0, 1, 0, 1, 0, -1.19209275e-07), -- CP3
     CFrame.new(333.859863, 489.692017, 348.370453, -0.000248972123, -8.6770342e-08, -0.99999994, 5.96024741e-08, 1, -8.678518536e-08, 0.99999994, -5.96240781e-08, -0.000248972123), -- CP4
     CFrame.new(223.016113, 313.692017, -146.599976, -1.19209275e-07, 0, -1,0, 1, 0, 1, 0, -1.19209275e-07), -- CP5
-    CFrame.new(-614, 904.432007, -519, 1, 1.074868116e-08, 6.566553476e-15, -1.07486811e-08, 1, 4.186879116e-08, -6.116519366e-15, -4.18687911e-08, 1) -- Summit
+    -- Summit BARU
+    CFrame.new(-706.752991, 899.102783, -509.533905, -0.809278965, 0.586797476, -0.027134439, -0.0784856081, -0.0622340403, 0.994970798, 0.582157671, 0.807338655, 0.096419856)
 }
 
 -- GUI utama
@@ -22,7 +24,7 @@ local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "YARS_SUMMIT_GUI"
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 280, 0, 480)
+Frame.Size = UDim2.new(0, 280, 0, 520)
 Frame.Position = UDim2.new(0.05, 0, 0.25, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BackgroundTransparency = 0.1
@@ -60,7 +62,7 @@ CountLabel.Text = "Summit Count: 0"
 CountLabel.Font = Enum.Font.SourceSansBold
 CountLabel.TextSize = 16
 
--- ✅ Fungsi buat bikin popup toast di pojok kanan atas
+-- Toast Notification
 local function showToast(msg, color)
     local Toast = Instance.new("TextLabel", ScreenGui)
     Toast.Size = UDim2.new(0, 250, 0, 30)
@@ -71,10 +73,8 @@ local function showToast(msg, color)
     Toast.Font = Enum.Font.SourceSansBold
     Toast.TextSize = 16
     Toast.BackgroundTransparency = 0.1
-    Toast.TextStrokeTransparency = 0.7
     Toast.BorderSizePixel = 0
 
-    -- Animasi fade out
     spawn(function()
         wait(2.5)
         for i = 1, 10 do
@@ -86,7 +86,7 @@ local function showToast(msg, color)
     end)
 end
 
--- Buttons CP
+-- Tombol CP
 for i = 1, #checkpoints do
     local btn = Instance.new("TextButton", Frame)
     btn.Size = UDim2.new(1, -20, 0, 30)
@@ -106,11 +106,13 @@ for i = 1, #checkpoints do
     end)
 end
 
--- Auto Loop
+-- Variabel Loop
 local loopRunning = false
 local delayTime = 0.5
 local loopCount = 0
+local respawnMode = "Mati" -- Default: Respawn Mati
 
+-- Tombol Auto Summit
 local AutoBtn = Instance.new("TextButton", Frame)
 AutoBtn.Size = UDim2.new(1, -20, 0, 40)
 AutoBtn.Position = UDim2.new(0, 10, 0, 160 + (#checkpoints)*35)
@@ -120,7 +122,29 @@ AutoBtn.TextColor3 = Color3.fromRGB(255,255,255)
 AutoBtn.Font = Enum.Font.SourceSansBold
 AutoBtn.TextSize = 18
 
--- Slider for Delay
+-- Pilihan Mode Respawn
+local RespawnBtn = Instance.new("TextButton", Frame)
+RespawnBtn.Size = UDim2.new(1, -20, 0, 30)
+RespawnBtn.Position = UDim2.new(0, 10, 1, -100)
+RespawnBtn.Text = "Mode Respawn: 🔴 Mati"
+RespawnBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+RespawnBtn.TextColor3 = Color3.fromRGB(255,255,255)
+RespawnBtn.Font = Enum.Font.SourceSansBold
+RespawnBtn.TextSize = 14
+
+RespawnBtn.MouseButton1Click:Connect(function()
+    if respawnMode == "Mati" then
+        respawnMode = "Load"
+        RespawnBtn.Text = "Mode Respawn: 🟡 Load"
+        showToast("Respawn Mode = LoadCharacter()", Color3.fromRGB(255,255,0))
+    else
+        respawnMode = "Mati"
+        RespawnBtn.Text = "Mode Respawn: 🔴 Mati"
+        showToast("Respawn Mode = Mati", Color3.fromRGB(255,100,100))
+    end
+end)
+
+-- Delay Control
 local DelayLabel = Instance.new("TextLabel", Frame)
 DelayLabel.Size = UDim2.new(1, -20, 0, 25)
 DelayLabel.Position = UDim2.new(0, 10, 1, -70)
@@ -146,7 +170,7 @@ Slider.MouseButton1Click:Connect(function()
     showToast("⏳ Delay set ke "..string.format("%.1f", delayTime).."s", Color3.fromRGB(255,255,0))
 end)
 
--- Loop Function
+-- Fungsi Auto Summit
 local function AutoSummit()
     loopRunning = true
     loopCount = 0
@@ -159,7 +183,7 @@ local function AutoSummit()
         InfoBox.Text = "🔄 Loop ke-"..loopCount.." dimulai..."
         showToast("🔄 Loop ke-"..loopCount.." dimulai", Color3.fromRGB(0,200,255))
 
-        -- CP1 sampai Summit
+        -- Teleport semua CP sampai Summit
         for i = 1, #checkpoints do
             local char = player.Character or player.CharacterAdded:Wait()
             char:WaitForChild("HumanoidRootPart").CFrame = checkpoints[i]
@@ -175,13 +199,21 @@ local function AutoSummit()
             task.wait(delayTime)
         end
 
-        -- Respawn ke spawn default
-        InfoBox.Text = "♻️ Respawn ke basecamp..."
-        showToast("♻️ Respawn ke basecamp", Color3.fromRGB(200,200,200))
-        player:LoadCharacter()
-        task.wait(3)
+        -- Respawn sesuai mode
+        if respawnMode == "Mati" then
+            InfoBox.Text = "💀 Respawn (Mati)..."
+            showToast("💀 Respawn: Mati", Color3.fromRGB(200,100,100))
+            local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+            if humanoid then humanoid.Health = 0 end
+            task.wait(5)
+        else
+            InfoBox.Text = "♻️ Respawn (LoadCharacter)..."
+            showToast("♻️ Respawn: LoadCharacter", Color3.fromRGB(200,200,200))
+            player:LoadCharacter()
+            task.wait(3)
+        end
 
-        InfoBox.Text = "🔁 Siap mulai loop berikutnya..."
+        InfoBox.Text = "🔁 Siap loop berikutnya..."
     end
 end
 
