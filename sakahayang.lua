@@ -1,4 +1,4 @@
---// AUTO SUMMIT HARD MODE (Delta Executor)
+--// AUTO SUMMIT HARD MODE (Delta Executor Mobile Fix)
 --// Dibuat oleh Yars
 
 local Players = game:GetService("Players")
@@ -10,16 +10,20 @@ local RF_GetLevel = ReplicatedStorage:WaitForChild("LevelService"):WaitForChild(
 local HardID = 9349848927
 
 -- CFrame Puncak
-local summitCF = CFrame.new(911.468689, 3141.61108, 562.791443, 0.997609913, -1.07775797e-08, 0.0690972731, 7.78348674e-09, 1, 4.360079592e-08, -0.0690972731, -4.29587672e-08, 0.997609913)
+local summitCF = CFrame.new(911.468689, 3141.61108, 562.791443, 
+    0.997609913, -1.07775797e-08, 0.0690972731, 
+    7.78348674e-09, 1, 4.360079592e-08, 
+    -0.0690972731, -4.29587672e-08, 0.997609913)
 
 -- Variabel
 local running = false
 local delayTime = 1 -- default
 local minDelay, maxDelay = 0.1, 5
 
--- GUI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+-- GUI (PASTI MUNCUL DI HP)
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AutoSummitGUI"
+ScreenGui.Parent = player:WaitForChild("PlayerGui") -- FIX: pakai PlayerGui biar muncul di HP
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 220, 0, 140)
@@ -28,7 +32,6 @@ Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
-Frame.BackgroundTransparency = 0.1
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
 
 local title = Instance.new("TextLabel", Frame)
@@ -55,7 +58,7 @@ startBtn.Text = "▶️ Start"
 startBtn.Font = Enum.Font.GothamBold
 startBtn.TextSize = 14
 startBtn.TextColor3 = Color3.new(1,1,1)
-startBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- hijau cerah
+startBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 100) -- hijau terang
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 8)
 
 local stopBtn = Instance.new("TextButton", Frame)
