@@ -1,4 +1,4 @@
---// Gunung HTS - Auto Summit Loop + CP Teleport GUI + Status Indikator + Loop Counter
+--// Gunung HTS - Auto Summit Step by Step (CP1→CP5→SUMMIT→Respawn Loop)
 --// Delta Executor Ready
 
 local Players = game:GetService("Players")
@@ -60,7 +60,7 @@ end
 
 -- Indikator Auto Summit
 local statusLabel = Instance.new("TextLabel", gui)
-statusLabel.Size = UDim2.new(0, 200, 0, 30)
+statusLabel.Size = UDim2.new(0, 220, 0, 30)
 statusLabel.Position = UDim2.new(0, 10, 0, 10)
 statusLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
 statusLabel.TextColor3 = Color3.fromRGB(255,0,0)
@@ -197,16 +197,29 @@ notifBtn.MouseButton1Click:Connect(function()
     notifBtn.Text = "Notifikasi: "..(notifEnabled and "ON" or "OFF")
 end)
 
--- Loop Auto Summit
+-- Loop Auto Summit Step by Step
 task.spawn(function()
     while task.wait(0.1) do
         if autoSummit and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            -- ke summit
-            player.Character.HumanoidRootPart.CFrame = checkpoints[#checkpoints][2]
-            notify("Teleport ke Summit")
+            -- Lewati CP1 → CP5
+            for i = 1, #checkpoints-1 do
+                local name, cf = checkpoints[i][1], checkpoints[i][2]
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = cf
+                    notify("Teleport ke "..name)
+                end
+                task.wait(delayTime)
+            end
+
+            -- Ke Summit terakhir
+            local summit = checkpoints[#checkpoints]
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = summit[2]
+                notify("Teleport ke "..summit[1])
+            end
             task.wait(delayTime)
 
-            -- paksa mati
+            -- Respawn / paksa mati
             local hum = player.Character:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.Health = 0
@@ -216,21 +229,13 @@ task.spawn(function()
                 notify("Paksa Mati")
             end
 
-            -- tunggu respawn
+            -- Tunggu respawn selesai
             player.CharacterAdded:Wait()
             task.wait(delayTime)
 
-            -- balik ke CP1
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.CFrame = checkpoints[1][2]
-                notify("Balik ke CP1")
-            end
-
-            -- tambah counter
+            -- Tambah counter
             loopCount += 1
             statusLabel.Text = "Auto Summit: ON | Loop: "..loopCount
-
-            task.wait(delayTime)
         end
     end
 end)
