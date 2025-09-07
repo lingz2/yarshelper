@@ -1,18 +1,18 @@
---// Ultra Smooth Auto Summit
+--// Ultra Fast Auto Summit with Notifications
 --// Delta Executor Ready
 --// GUI Toggle [M]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
 
 -- Peak CFrame
 local summitCFrame = CFrame.new(-975.276672, 1519.43201, 1443.22205, 0.721820176, -3.034696052e-08, -0.692080617, -3.361549976e-08, 1, -7.89088836e-08, 0.692080617, 8.02226623e-08, 0.721820176)
 
 -- Settings
 local autoSummit = false
-local delayTime = 1
+local delayTime = 1 -- default delay
 local minDelay, maxDelay = 0.1, 5
 
 --// GUI
@@ -22,8 +22,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 250, 0, 150)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
+MainFrame.Size = UDim2.new(0, 270, 0, 170)
+MainFrame.Position = UDim2.new(0.5, -135, 0.5, -85)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -33,7 +33,7 @@ MainFrame.Draggable = true
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
-Title.Text = "Ultra Smooth Auto Summit"
+Title.Text = "Ultra Fast Auto Summit"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -60,12 +60,12 @@ MinBtn.TextColor3=Color3.fromRGB(255,255,255)
 MinBtn.Font=Enum.Font.GothamBold
 MinBtn.TextSize=18
 MinBtn.Parent = MainFrame
-MinBtn.MouseButton1Click:Connect(function() MainFrame.Size = UDim2.new(0,250,0,30) end)
+MinBtn.MouseButton1Click:Connect(function() MainFrame.Size = UDim2.new(0,270,0,30) end)
 
 -- Start/Stop Button
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size=UDim2.new(0,200,0,40)
-ToggleBtn.Position=UDim2.new(0.5,-100,0,50)
+ToggleBtn.Size=UDim2.new(0,220,0,40)
+ToggleBtn.Position=UDim2.new(0.5,-110,0,50)
 ToggleBtn.Text="Start Auto Summit"
 ToggleBtn.BackgroundColor3=Color3.fromRGB(50,150,50)
 ToggleBtn.TextColor3=Color3.fromRGB(255,255,255)
@@ -79,7 +79,7 @@ end)
 
 -- Delay Controls
 local DelayLabel = Instance.new("TextLabel")
-DelayLabel.Size=UDim2.new(0,250,0,30)
+DelayLabel.Size=UDim2.new(0,270,0,30)
 DelayLabel.Position=UDim2.new(0,0,0,100)
 DelayLabel.BackgroundTransparency=1
 DelayLabel.Text="Delay: "..delayTime.."s"
@@ -90,13 +90,13 @@ DelayLabel.Parent = MainFrame
 
 local IncreaseBtn = Instance.new("TextButton")
 IncreaseBtn.Size=UDim2.new(0,30,0,30)
-IncreaseBtn.Position=UDim2.new(0,200,0,100)
+IncreaseBtn.Position=UDim2.new(0,230,0,100)
 IncreaseBtn.Text="+"
 IncreaseBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
 IncreaseBtn.TextColor3=Color3.fromRGB(255,255,255)
 IncreaseBtn.Font=Enum.Font.GothamBold
 IncreaseBtn.TextSize=18
-IncreaseBtn.Parent=MainFrame
+IncreaseBtn.Parent = MainFrame
 IncreaseBtn.MouseButton1Click:Connect(function()
     delayTime = math.clamp(delayTime + 0.1, minDelay, maxDelay)
     DelayLabel.Text="Delay: "..string.format("%.1f",delayTime).."s"
@@ -104,7 +104,7 @@ end)
 
 local DecreaseBtn = Instance.new("TextButton")
 DecreaseBtn.Size=UDim2.new(0,30,0,30)
-DecreaseBtn.Position=UDim2.new(0,170,0,100)
+DecreaseBtn.Position=UDim2.new(0,200,0,100)
 DecreaseBtn.Text="-"
 DecreaseBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
 DecreaseBtn.TextColor3=Color3.fromRGB(255,255,255)
@@ -124,7 +124,16 @@ UserInputService.InputBegan:Connect(function(input,gpe)
     end
 end)
 
--- Ultra Smooth Auto Summit Loop
+-- Notification function
+local function notify(msg)
+    StarterGui:SetCore("SendNotification", {
+        Title="Auto Summit";
+        Text=msg;
+        Duration=2;
+    })
+end
+
+-- Ultra Fast Auto Summit Loop
 spawn(function()
     while true do
         if autoSummit then
@@ -134,15 +143,18 @@ spawn(function()
 
             -- Teleport ke puncak
             hrp.CFrame = summitCFrame
+            notify("Teleported to Peak!")
             wait(delayTime)
-
-            -- Paksa respawn tapi minimal efek
+            
+            -- Kill Humanoid langsung
             if humanoid then
-                humanoid:TakeDamage(humanoid.Health)
+                humanoid.Health = 0
+                notify("Character Died, Respawning...")
             end
 
-            -- Tunggu karakter respawn dan HumanoidRootPart muncul
+            -- Tunggu karakter respawn
             repeat wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            notify("Respawn Complete")
         else
             wait(0.2)
         end
