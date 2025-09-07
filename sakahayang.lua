@@ -1,5 +1,5 @@
 --// AUTO SUMMIT HARD MODE + ROBUST RESPAWN + INVISIBLE (Delta Executor Mobile Ready)
---// Revisi: paksa respawn setelah teleport ke summit, dengan fallback (kill/break joints)
+--// Revisi: paksa respawn setelah teleport ke summit, dengan delay bisa diatur
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local RF_GetLevel = ReplicatedStorage:WaitForChild("LevelService"):WaitForChild("RF_GetLevel")
 local HardID = 9349848927
 
--- CFrame Summit (kamu minta ini)
+-- CFrame Summit
 local summitCF = CFrame.new(
     -910.277771, 3142.12842, 562.343323,
     0.921977043, -4.37947945e-09, 0.387244552,
@@ -24,7 +24,7 @@ local minDelay, maxDelay = 0.1, 5
 local invisible = false
 local summitCount = 0
 
--- GUI (PlayerGui, ResetOnSpawn = false)
+-- GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AutoSummitGUI"
 ScreenGui.ResetOnSpawn = false
@@ -149,7 +149,6 @@ local function setInvisible(state)
     else
         invisBtn.Text = "👻 Invisible: OFF"
         invisBtn.BackgroundColor3 = Color3.fromRGB(100,100,255)
-        -- respawn to restore normal appearance
         pcall(function() player:LoadCharacter() end)
     end
 end
@@ -161,9 +160,8 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Robust respawn function with timeouts + fallbacks
+-- Robust respawn function
 local function robustRespawn(oldChar)
-    -- attempt 1: LoadCharacter()
     pcall(function() player:LoadCharacter() end)
     local start = tick()
     while tick() - start < 5 do
@@ -172,13 +170,9 @@ local function robustRespawn(oldChar)
         end
         task.wait(0.1)
     end
-
-    -- attempt 2: try set Humanoid.Health = 0
     if oldChar and oldChar.Parent then
         local hum = oldChar:FindFirstChildOfClass("Humanoid")
-        if hum then
-            pcall(function() hum.Health = 0 end)
-        end
+        if hum then pcall(function() hum.Health = 0 end) end
     end
     start = tick()
     while tick() - start < 5 do
@@ -187,8 +181,6 @@ local function robustRespawn(oldChar)
         end
         task.wait(0.1)
     end
-
-    -- attempt 3: BreakJoints()
     if oldChar and oldChar.Parent then
         pcall(function() oldChar:BreakJoints() end)
     end
@@ -199,54 +191,38 @@ local function robustRespawn(oldChar)
         end
         task.wait(0.1)
     end
-
-    -- final attempt: LoadCharacter again and wait (blocking)
     pcall(function() player:LoadCharacter() end)
-    local okChar = player.CharacterAdded:Wait(8) -- wait a bit longer
+    local okChar = player.CharacterAdded:Wait(8)
     return okChar
 end
 
--- Main summit loop (robust): teleport -> wait -> force respawn -> continue
+-- Main summit loop
 local function doSummit()
     while running do
-        -- pilih level Hard
-        pcall(function()
-            RF_GetLevel:InvokeServer(HardID)
-        end)
+        pcall(function() RF_GetLevel:InvokeServer(HardID) end)
+        task.wait(0.2)
 
-        task.wait(0.3)
-
-        -- teleport ke puncak
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            pcall(function() hrp.CFrame = summitCF end)
-        end
+        if hrp then pcall(function() hrp.CFrame = summitCF end) end
         status.Text = "Status: Teleported to summit"
         status.TextColor3 = Color3.fromRGB(200,200,50)
 
-        -- tunggu minimal 1 detik biar server catat summit (jika perlu lebih lama)
-        local waitTime = math.max(1, delayTime)
+        -- tunggu sesuai delay (bisa 0.1-5 detik)
         local t0 = tick()
-        while tick() - t0 < waitTime do
+        while tick() - t0 < delayTime do
             if not running then break end
-            task.wait(0.1)
+            task.wait(0.05)
         end
 
         if not running then break end
 
-        -- RESPWAN (robust)
         status.Text = "Status: Respawning..."
         status.TextColor3 = Color3.fromRGB(255,150,0)
         local newChar = robustRespawn(char)
-        if newChar then
-            -- apply invisible if needed
-            if invisible then
-                task.wait(0.4)
-                applyInvisible(newChar)
-            end
 
-            -- increment counter (summit tercatat di server saat kita di summit)
+        if newChar then
+            if invisible then task.wait(0.2); applyInvisible(newChar) end
             summitCount = summitCount + 1
             counterLbl.Text = "Summit Count: "..summitCount
             status.Text = "Status: ✅ Next cycle"
@@ -254,20 +230,11 @@ local function doSummit()
         else
             status.Text = "Status: ❗ Respawn failed"
             status.TextColor3 = Color3.fromRGB(255,80,80)
-            -- kalau gagal, kita berhenti supaya tidak loop tanpa respawn
             running = false
             break
         end
-
-        -- jeda sebelum ulang
-        local t1 = 0
-        while t1 < delayTime do
-            if not running then break end
-            task.wait(0.1); t1 = t1 + 0.1
-        end
     end
 
-    -- jika keluar loop
     if not running then
         status.Text = "Status: ❌ OFF"
         status.TextColor3 = Color3.fromRGB(255,80,80)
