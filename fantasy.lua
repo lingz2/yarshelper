@@ -1,4 +1,4 @@
---// Auto Summit Basecamp to Peak
+--// Auto Summit Basecamp to Peak (Final Revisi)
 --// Delta Executor Ready
 --// GUI Toggle [M]
 
@@ -6,8 +6,6 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
 
 -- Peak CFrame
 local summitCFrame = CFrame.new(-975.276672, 1519.43201, 1443.22205, 0.721820176, -3.034696052e-08, -0.692080617, -3.361549976e-08, 1, -7.89088836e-08, 0.692080617, 8.02226623e-08, 0.721820176)
@@ -134,21 +132,21 @@ end)
 -- Auto Summit Loop
 spawn(function()
     while true do
-        RunService.Heartbeat:Wait()
         if autoSummit then
-            if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-                character = player.Character or player.CharacterAdded:Wait()
-                hrp = character:WaitForChild("HumanoidRootPart")
-            end
-
+            local char = player.Character or player.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            
+            -- Teleport ke puncak
             hrp.CFrame = summitCFrame
             wait(delayTime)
-
-            -- Respawn Character
+            
+            -- Respawn otomatis
             player:LoadCharacter()
-            wait(0.5) -- wait sedikit sebelum loop berikutnya
+            
+            -- Tunggu karakter spawn sebelum loop berikutnya
+            repeat wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         else
-            wait(0.5)
+            wait(0.2)
         end
     end
 end)
