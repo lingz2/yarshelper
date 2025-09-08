@@ -66,7 +66,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0,460,0,480)
+mainFrame.Size = UDim2.new(0,460,0,420)
 mainFrame.Position = UDim2.new(0.5,-230,0.2,0)
 mainFrame.Active = true
 mainFrame.Draggable = true
@@ -132,23 +132,11 @@ mergeBtn.Position = UDim2.new(0,15,0,60)
 mergeBtn.Text = "🔗 Merge & Play"
 styleButton(mergeBtn, Color3.fromRGB(255,140,0))
 
--- Walk / Slide toggle
-local walkMode = true
-local walkToggleBtn = Instance.new("TextButton", contentFrame)
-walkToggleBtn.Size = UDim2.new(0,120,0,35)
-walkToggleBtn.Position = UDim2.new(0,180,0,60)
-walkToggleBtn.Text = "Mode: Walk"
-styleButton(walkToggleBtn, Color3.fromRGB(123,104,238))
-walkToggleBtn.MouseButton1Click:Connect(function()
-    walkMode = not walkMode
-    walkToggleBtn.Text = walkMode and "Mode: Walk" or "Mode: Slide"
-end)
-
 -- Global speed control
 local globalSpeed = 1
 local globalSpeedLabel = Instance.new("TextLabel", contentFrame)
 globalSpeedLabel.Size = UDim2.new(0,140,0,35)
-globalSpeedLabel.Position = UDim2.new(0,315,0,60)
+globalSpeedLabel.Position = UDim2.new(0,175,0,60)
 globalSpeedLabel.BackgroundTransparency = 1
 globalSpeedLabel.Text = "Global: 1x"
 globalSpeedLabel.TextColor3 = Color3.new(1,1,1)
@@ -157,13 +145,13 @@ globalSpeedLabel.TextSize = 14
 
 local globalMinus = Instance.new("TextButton", contentFrame)
 globalMinus.Size = UDim2.new(0,30,0,30)
-globalMinus.Position = UDim2.new(0,455,0,62)
+globalMinus.Position = UDim2.new(0,320,0,62)
 globalMinus.Text = "◀"
 styleButton(globalMinus, Color3.fromRGB(90,90,90))
 
 local globalPlus = Instance.new("TextButton", contentFrame)
 globalPlus.Size = UDim2.new(0,30,0,30)
-globalPlus.Position = UDim2.new(0,490,0,62)
+globalPlus.Position = UDim2.new(0,355,0,62)
 globalPlus.Text = "▶"
 styleButton(globalPlus, Color3.fromRGB(90,90,90))
 
@@ -215,53 +203,68 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- ====== FINAL PLAYBACK (akurat + animasi) ======
 local function playReplay(data, speed)
     if isPlaying then return end
     isPlaying = true
     isPaused = false
 
-    if walkMode and humanoidRootPart and character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        for _, frame in ipairs(data) do
-            if not isPlaying then break end
-            while isPaused do RunService.Heartbeat:Wait() end
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+    if not humanoid or not humanoidRootPart or not animator then return end
 
-            local pos = Vector3.new(frame.Position[1], frame.Position[2], frame.Position[3])
-            local look = Vector3.new(frame.LookVector[1], frame.LookVector[2], frame.LookVector[3])
-            local up = Vector3.new(frame.UpVector[1], frame.UpVector[2], frame.UpVector[3])
+    local walkAnim = Instance.new("Animation")
+    walkAnim.AnimationId = "rbxassetid://913402848"
+    local jumpAnim = Instance.new("Animation")
+    jumpAnim.AnimationId = "rbxassetid://125750702"
+    local idleAnim = Instance.new("Animation")
+    idleAnim.AnimationId = "rbxassetid://180435571"
 
-            humanoid:MoveTo(pos)
-            humanoidRootPart.CFrame = CFrame.lookAt(pos, pos + look, up)
+    local walkTrack = animator:LoadAnimation(walkAnim)
+    local jumpTrack = animator:LoadAnimation(jumpAnim)
+    local idleTrack = animator:LoadAnimation(idleAnim)
 
-            local reached = false
-            local connection
-            connection = humanoid.MoveToFinished:Connect(function()
-                reached = true
-            end)
-            local timeout = tick() + 1 / speed
-            while not reached and tick() < timeout do
-                if not isPlaying then break end
-                RunService.Heartbeat:Wait()
+    idleTrack:Play()
+
+    for i, frame in ipairs(data) do
+        if not isPlaying then break end
+        while isPaused do RunService.Heartbeat:Wait() end
+
+        local pos = frame.Position
+        local look = frame.LookVector
+        local up = frame.UpVector
+        local currPos = Vector3.new(pos[1],pos[2],pos[3])
+
+        if i > 1 then
+            local lastPos = Vector3.new(unpack(data[i-1].Position))
+            local deltaY = currPos.Y - lastPos.Y
+            local distXZ = ((currPos - lastPos) * Vector3.new(1,0,1)).Magnitude
+
+            if math.abs(deltaY) > 2 then
+                if not jumpTrack.IsPlaying then
+                    walkTrack:Stop(); idleTrack:Stop(); jumpTrack:Play()
+                end
+            elseif distXZ > 0.5 then
+                if not walkTrack.IsPlaying then
+                    jumpTrack:Stop(); idleTrack:Stop(); walkTrack:Play()
+                end
+            else
+                if not idleTrack.IsPlaying then
+                    walkTrack:Stop(); jumpTrack:Stop(); idleTrack:Play()
+                end
             end
-            connection:Disconnect()
         end
-    else
-        for _, frame in ipairs(data) do
-            if not isPlaying then break end
-            while isPaused do RunService.Heartbeat:Wait() end
-            if humanoidRootPart and humanoidRootPart.Parent then
-                local pos = frame.Position
-                local look = frame.LookVector
-                local up = frame.UpVector
-                humanoidRootPart.CFrame = CFrame.lookAt(
-                    Vector3.new(pos[1], pos[2], pos[3]),
-                    Vector3.new(pos[1]+look[1], pos[2]+look[2], pos[3]+look[3]),
-                    Vector3.new(up[1], up[2], up[3])
-                )
-            end
-            task.wait(1/60 / speed)
-        end
+
+        humanoidRootPart.CFrame = CFrame.lookAt(
+            currPos,
+            currPos + Vector3.new(look[1], look[2], look[3]),
+            Vector3.new(up[1], up[2], up[3])
+        )
+
+        task.wait(1/60 / (speed or 1))
     end
+
+    walkTrack:Stop(); jumpTrack:Stop(); idleTrack:Play()
     isPlaying = false
 end
 
@@ -288,7 +291,6 @@ function addReplayItem(saved, index)
         saved.Name = nameBox.Text
     end)
 
-    -- speed control
     local speedLabel = Instance.new("TextLabel", item)
     speedLabel.Size = UDim2.new(0.3,0,0,20)
     speedLabel.Position = UDim2.new(0,5,0,35)
@@ -319,7 +321,6 @@ function addReplayItem(saved, index)
         speedLabel.Text = "Speed: "..saved.Speed.."x"
     end)
 
-    -- tombol kontrol
     local playBtn = Instance.new("TextButton", item)
     playBtn.Size = UDim2.new(0,35,0,30)
     playBtn.Position = UDim2.new(0.55,0,0.5,-15)
@@ -406,16 +407,18 @@ loadBtn.MouseButton1Click:Connect(function()
 end)
 
 mergeBtn.MouseButton1Click:Connect(function()
-    local merged = {}
+    local mergedFrames = {}
     for _, r in ipairs(savedReplays) do
         if r.Selected then
-            for _, f in ipairs(r.Frames) do table.insert(merged, f) end
+            for _, frame in ipairs(r.Frames) do
+                table.insert(mergedFrames, frame)
+            end
         end
     end
-    if #merged > 0 then
-        task.spawn(function() playReplay(merged, globalSpeed) end)
+    if #mergedFrames > 0 then
+        task.spawn(function() playReplay(mergedFrames, globalSpeed) end)
     end
 end)
 
-closeBtn.MouseButton1Click:Connect(function() screenGui.Enabled = false end)
-minimizeBtn.MouseButton1Click:Connect(function() screenGui.Enabled = not screenGui.Enabled end)
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+minimizeBtn.MouseButton1Click:Connect(function() contentFrame.Visible = not contentFrame.Visible end)
