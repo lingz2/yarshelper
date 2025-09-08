@@ -66,7 +66,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0,460,0,460)
+mainFrame.Size = UDim2.new(0,460,0,420)
 mainFrame.Position = UDim2.new(0.5,-230,0.2,0)
 mainFrame.Active = true
 mainFrame.Draggable = true
@@ -155,19 +155,6 @@ globalPlus.Position = UDim2.new(0,355,0,62)
 globalPlus.Text = "▶"
 styleButton(globalPlus, Color3.fromRGB(90,90,90))
 
--- Toggle mode Walk / Slide
-local playbackMode = "Walk"
-local modeBtn = Instance.new("TextButton", contentFrame)
-modeBtn.Size = UDim2.new(0,150,0,35)
-modeBtn.Position = UDim2.new(0,180,0,100)
-modeBtn.Text = "Mode: Walk"
-styleButton(modeBtn, Color3.fromRGB(123,104,238))
-
-modeBtn.MouseButton1Click:Connect(function()
-    playbackMode = (playbackMode == "Walk") and "Slide" or "Walk"
-    modeBtn.Text = "Mode: "..playbackMode
-end)
-
 globalMinus.MouseButton1Click:Connect(function()
     globalSpeed = math.max(0.5, globalSpeed - 0.5)
     globalSpeedLabel.Text = "Global: "..globalSpeed.."x"
@@ -179,8 +166,8 @@ end)
 
 -- Scroll replay
 local replayList = Instance.new("ScrollingFrame", contentFrame)
-replayList.Size = UDim2.new(1,-30,1,-150)
-replayList.Position = UDim2.new(0,15,0,140)
+replayList.Size = UDim2.new(1,-30,1,-110)
+replayList.Position = UDim2.new(0,15,0,100)
 replayList.CanvasSize = UDim2.new(0,0,0,0)
 replayList.ScrollBarThickness = 6
 styleFrame(replayList, 10, Color3.fromRGB(55,55,65))
@@ -209,59 +196,75 @@ RunService.Heartbeat:Connect(function()
     if isRecording and humanoidRootPart and humanoidRootPart.Parent then
         local cf = humanoidRootPart.CFrame
         table.insert(recordData, {
-            Position = {cf.Position.X, cf.Position.Y, cf.Position.Z}
+            Position = {cf.Position.X, cf.Position.Y, cf.Position.Z},
+            LookVector = {cf.LookVector.X, cf.LookVector.Y, cf.LookVector.Z},
+            UpVector = {cf.UpVector.X, cf.UpVector.Y, cf.UpVector.Z}
         })
     end
 end)
 
+-- ====== FINAL PLAYBACK (akurat + animasi) ======
 local function playReplay(data, speed)
     if isPlaying then return end
-    if not data or #data < 2 then return end
-
     isPlaying = true
     isPaused = false
 
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local root = humanoidRootPart
-    if not humanoid or not root then
-        isPlaying = false
-        return
-    end
+    local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+    if not humanoid or not humanoidRootPart or not animator then return end
 
-    if playbackMode == "Walk" then
-        -- ===== Walk Mode (animasi asli) =====
-        local originalWalkSpeed = humanoid.WalkSpeed
-        humanoid.WalkSpeed = math.clamp(originalWalkSpeed * (speed or 1), 6, 32)
+    local walkAnim = Instance.new("Animation")
+    walkAnim.AnimationId = "rbxassetid://913402848"
+    local jumpAnim = Instance.new("Animation")
+    jumpAnim.AnimationId = "rbxassetid://125750702"
+    local idleAnim = Instance.new("Animation")
+    idleAnim.AnimationId = "rbxassetid://180435571"
 
-        for i = 1, #data-1 do
-            if not isPlaying then break end
-            while isPaused do RunService.Heartbeat:Wait() end
+    local walkTrack = animator:LoadAnimation(walkAnim)
+    local jumpTrack = animator:LoadAnimation(jumpAnim)
+    local idleTrack = animator:LoadAnimation(idleAnim)
 
-            local target = Vector3.new(unpack(data[i+1].Position))
-            humanoid:MoveTo(target)
+    idleTrack:Play()
 
-            local startTick = tick()
-            local timeout = (2 / (speed or 1))
+    for i, frame in ipairs(data) do
+        if not isPlaying then break end
+        while isPaused do RunService.Heartbeat:Wait() end
 
-            repeat
-                RunService.Heartbeat:Wait()
-                if not isPlaying or not humanoid.Parent then break end
-            until (root.Position - target).Magnitude < 2 or (tick() - startTick) > timeout
+        local pos = frame.Position
+        local look = frame.LookVector
+        local up = frame.UpVector
+        local currPos = Vector3.new(pos[1],pos[2],pos[3])
+
+        if i > 1 then
+            local lastPos = Vector3.new(unpack(data[i-1].Position))
+            local deltaY = currPos.Y - lastPos.Y
+            local distXZ = ((currPos - lastPos) * Vector3.new(1,0,1)).Magnitude
+
+            if math.abs(deltaY) > 2 then
+                if not jumpTrack.IsPlaying then
+                    walkTrack:Stop(); idleTrack:Stop(); jumpTrack:Play()
+                end
+            elseif distXZ > 0.5 then
+                if not walkTrack.IsPlaying then
+                    jumpTrack:Stop(); idleTrack:Stop(); walkTrack:Play()
+                end
+            else
+                if not idleTrack.IsPlaying then
+                    walkTrack:Stop(); jumpTrack:Stop(); idleTrack:Play()
+                end
+            end
         end
 
-        humanoid:Move(Vector3.zero, true)
-        humanoid.WalkSpeed = originalWalkSpeed
-    else
-        -- ===== Slide Mode (CFrame teleport) =====
-        for i = 1, #data-1 do
-            if not isPlaying then break end
-            while isPaused do RunService.Heartbeat:Wait() end
+        humanoidRootPart.CFrame = CFrame.lookAt(
+            currPos,
+            currPos + Vector3.new(look[1], look[2], look[3]),
+            Vector3.new(up[1], up[2], up[3])
+        )
 
-            root.CFrame = CFrame.new(unpack(data[i+1].Position))
-            task.wait(0.1 / (speed or 1))
-        end
+        task.wait(1/60 / (speed or 1))
     end
 
+    walkTrack:Stop(); jumpTrack:Stop(); idleTrack:Play()
     isPlaying = false
 end
 
@@ -417,22 +420,5 @@ mergeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ====== Minimize & Close ======
-local isMinimized = false
-local originalSize = mainFrame.Size
-
-minimizeBtn.MouseButton1Click:Connect(function()
-    if not isMinimized then
-        mainFrame.Size = UDim2.new(0,460,0,40)
-        contentFrame.Visible = false
-        isMinimized = true
-    else
-        mainFrame.Size = originalSize
-        contentFrame.Visible = true
-        isMinimized = false
-    end
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+minimizeBtn.MouseButton1Click:Connect(function() contentFrame.Visible = not contentFrame.Visible end)
