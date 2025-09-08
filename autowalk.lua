@@ -66,7 +66,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0,460,0,420)
+mainFrame.Size = UDim2.new(0,460,0,460)
 mainFrame.Position = UDim2.new(0.5,-230,0.2,0)
 mainFrame.Active = true
 mainFrame.Draggable = true
@@ -155,6 +155,19 @@ globalPlus.Position = UDim2.new(0,355,0,62)
 globalPlus.Text = "▶"
 styleButton(globalPlus, Color3.fromRGB(90,90,90))
 
+-- Toggle mode Walk / Slide
+local playbackMode = "Walk"
+local modeBtn = Instance.new("TextButton", contentFrame)
+modeBtn.Size = UDim2.new(0,150,0,35)
+modeBtn.Position = UDim2.new(0,180,0,100)
+modeBtn.Text = "Mode: Walk"
+styleButton(modeBtn, Color3.fromRGB(123,104,238))
+
+modeBtn.MouseButton1Click:Connect(function()
+    playbackMode = (playbackMode == "Walk") and "Slide" or "Walk"
+    modeBtn.Text = "Mode: "..playbackMode
+end)
+
 globalMinus.MouseButton1Click:Connect(function()
     globalSpeed = math.max(0.5, globalSpeed - 0.5)
     globalSpeedLabel.Text = "Global: "..globalSpeed.."x"
@@ -164,30 +177,10 @@ globalPlus.MouseButton1Click:Connect(function()
     globalSpeedLabel.Text = "Global: "..globalSpeed.."x"
 end)
 
--- Toggle mode
-local playMode = "move"
-local toggleBtn = Instance.new("TextButton", contentFrame)
-toggleBtn.Size = UDim2.new(0,150,0,30)
-toggleBtn.Position = UDim2.new(0,175,0,95)
-toggleBtn.Text = "Mode: Animasi Jalan"
-styleButton(toggleBtn, Color3.fromRGB(100,100,200))
-
-toggleBtn.MouseButton1Click:Connect(function()
-    if playMode == "move" then
-        playMode = "cframe"
-        toggleBtn.Text = "Mode: Slide Cepat"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(200,100,100)
-    else
-        playMode = "move"
-        toggleBtn.Text = "Mode: Animasi Jalan"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(100,100,200)
-    end
-end)
-
 -- Scroll replay
 local replayList = Instance.new("ScrollingFrame", contentFrame)
-replayList.Size = UDim2.new(1,-30,1,-140)
-replayList.Position = UDim2.new(0,15,0,130)
+replayList.Size = UDim2.new(1,-30,1,-150)
+replayList.Position = UDim2.new(0,15,0,140)
 replayList.CanvasSize = UDim2.new(0,0,0,0)
 replayList.ScrollBarThickness = 6
 styleFrame(replayList, 10, Color3.fromRGB(55,55,65))
@@ -208,7 +201,7 @@ end
 player.CharacterAdded:Connect(onCharacterAdded)
 if player.Character then onCharacterAdded(player.Character) end
 
--- ====== Record ======
+-- ====== Record / Playback ======
 local function startRecording() recordData = {}; isRecording = true end
 local function stopRecording() isRecording = false end
 
@@ -216,48 +209,59 @@ RunService.Heartbeat:Connect(function()
     if isRecording and humanoidRootPart and humanoidRootPart.Parent then
         local cf = humanoidRootPart.CFrame
         table.insert(recordData, {
-            Position = {cf.Position.X, cf.Position.Y, cf.Position.Z},
-            LookVector = {cf.LookVector.X, cf.LookVector.Y, cf.LookVector.Z},
-            UpVector = {cf.UpVector.X, cf.UpVector.Y, cf.UpVector.Z}
+            Position = {cf.Position.X, cf.Position.Y, cf.Position.Z}
         })
     end
 end)
 
--- ====== Play Replay ======
 local function playReplay(data, speed)
     if isPlaying then return end
+    if not data or #data < 2 then return end
+
     isPlaying = true
     isPaused = false
 
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then
-        warn("No humanoid found!")
+    local root = humanoidRootPart
+    if not humanoid or not root then
         isPlaying = false
         return
     end
 
-    for i = 1, #data-1 do
-        if not isPlaying then break end
-        while isPaused do RunService.Heartbeat:Wait() end
+    if playbackMode == "Walk" then
+        -- ===== Walk Mode (animasi asli) =====
+        local originalWalkSpeed = humanoid.WalkSpeed
+        humanoid.WalkSpeed = math.clamp(originalWalkSpeed * (speed or 1), 6, 32)
 
-        if humanoidRootPart and humanoidRootPart.Parent then
-            local current = Vector3.new(unpack(data[i].Position))
-            local nextPos = Vector3.new(unpack(data[i+1].Position))
+        for i = 1, #data-1 do
+            if not isPlaying then break end
+            while isPaused do RunService.Heartbeat:Wait() end
 
-            if playMode == "move" then
-                local dir = (nextPos - current)
-                if dir.Magnitude > 0 then
-                    humanoid:Move(dir.Unit, true)
-                end
-            else
-                humanoidRootPart.CFrame = CFrame.new(nextPos)
-            end
+            local target = Vector3.new(unpack(data[i+1].Position))
+            humanoid:MoveTo(target)
+
+            local startTick = tick()
+            local timeout = (2 / (speed or 1))
+
+            repeat
+                RunService.Heartbeat:Wait()
+                if not isPlaying or not humanoid.Parent then break end
+            until (root.Position - target).Magnitude < 2 or (tick() - startTick) > timeout
         end
 
-        task.wait(1/30 / speed)
+        humanoid:Move(Vector3.zero, true)
+        humanoid.WalkSpeed = originalWalkSpeed
+    else
+        -- ===== Slide Mode (CFrame teleport) =====
+        for i = 1, #data-1 do
+            if not isPlaying then break end
+            while isPaused do RunService.Heartbeat:Wait() end
+
+            root.CFrame = CFrame.new(unpack(data[i+1].Position))
+            task.wait(0.1 / (speed or 1))
+        end
     end
 
-    humanoid:Move(Vector3.zero, true)
     isPlaying = false
 end
 
@@ -349,8 +353,8 @@ function addReplayItem(saved, index)
         selectCheck.Text = saved.Selected and "☑" or "☐"
     end)
 
-    playBtn.MouseButton1Click:Connect(function() 
-        task.spawn(function() playReplay(saved.Frames, saved.Speed*globalSpeed) end) 
+    playBtn.MouseButton1Click:Connect(function()
+        task.spawn(function() playReplay(saved.Frames, saved.Speed*globalSpeed) end)
     end)
     pauseBtn.MouseButton1Click:Connect(function() isPaused = not isPaused end)
     delBtn.MouseButton1Click:Connect(function()
