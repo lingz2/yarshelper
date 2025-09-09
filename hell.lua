@@ -22,20 +22,22 @@ end
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoSummitGUI"
 ScreenGui.Parent = game.CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 220, 0, 160)
 MainFrame.Position = UDim2.new(0.25, 0, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-MainFrame.BackgroundTransparency = 0.1
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- ini yang bikin bisa drag di PC (Android perlu manual handler, di bawah)
+MainFrame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner", MainFrame)
+local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0,12)
+UICorner.Parent = MainFrame
 
+-- Title Bar
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,25)
 Title.BackgroundColor3 = Color3.fromRGB(40,40,40)
@@ -45,6 +47,7 @@ Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 14
 Title.Parent = MainFrame
 
+-- Close Button
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0,25,0,25)
 closeBtn.Position = UDim2.new(1,-25,0,0)
@@ -53,6 +56,7 @@ closeBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
 closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.Parent = Title
 
+-- Minimize Button
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0,25,0,25)
 minimizeBtn.Position = UDim2.new(1,-50,0,0)
@@ -84,6 +88,7 @@ delayLabel.Font = Enum.Font.SourceSans
 delayLabel.TextSize = 14
 delayLabel.Parent = MainFrame
 
+-- Minus Button
 local minusBtn = Instance.new("TextButton")
 minusBtn.Size = UDim2.new(0,40,0,25)
 minusBtn.Position = UDim2.new(0,20,0,90)
@@ -92,6 +97,7 @@ minusBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
 minusBtn.TextColor3 = Color3.new(1,1,1)
 minusBtn.Parent = MainFrame
 
+-- Plus Button
 local plusBtn = Instance.new("TextButton")
 plusBtn.Size = UDim2.new(0,40,0,25)
 plusBtn.Position = UDim2.new(0,70,0,90)
@@ -100,7 +106,7 @@ plusBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
 plusBtn.TextColor3 = Color3.new(1,1,1)
 plusBtn.Parent = MainFrame
 
--- Teleport Btn
+-- Teleport Button
 local tpBtn = Instance.new("TextButton")
 tpBtn.Size = UDim2.new(0,180,0,25)
 tpBtn.Position = UDim2.new(0,20,0,120)
@@ -109,9 +115,8 @@ tpBtn.BackgroundColor3 = Color3.fromRGB(50,150,50)
 tpBtn.TextColor3 = Color3.new(1,1,1)
 tpBtn.Parent = MainFrame
 
--- Auto Summit Loop
+-- Toggle Auto Summit
 local autoSummit = false
-
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0,100,0,25)
 toggleBtn.Position = UDim2.new(0,110,0,90)
@@ -179,7 +184,7 @@ closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Drag support untuk Android
+-- Dragging Support (PC + Mobile)
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
