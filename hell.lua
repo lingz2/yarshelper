@@ -1,15 +1,12 @@
--- Auto Summit Loop GUI for Hell Expedition (Extended Version)
--- Watermark: "yars ganteng"
+-- Hell Expedition Auto Summit GUI Loop
+-- Watermark: yars ganteng
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
--- === CONFIG (default) ===
+-- CFrame Summit
 local summitCFrame = CFrame.new(
     -1513.30737, 1873.19397, -72.6928024,
     0.962206244, 8.961788476e-08, -0.27232185,
@@ -17,222 +14,203 @@ local summitCFrame = CFrame.new(
     0.27232185, 4.70346855e-08, 0.962206244
 )
 
-local respawnRemoteName = "RespawnChoiceEvent"
-local respawnArg = {"Base"}
+-- Respawn Remote
+local function doRespawn()
+    local args = {"Base"}
+    ReplicatedStorage:WaitForChild("RespawnChoiceEvent"):FireServer(unpack(args))
+end
 
-local delaySeconds = 1.0
-local loopStop = false
-local autoMode = false
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
 
--- === UI CREATION ===
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "YarsAutoSummitGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 160)
+MainFrame.Position = UDim2.new(0.25, 0, 0.25, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- ini yang bikin bisa drag di PC (Android perlu manual handler, di bawah)
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 380, 0, 270)
-mainFrame.Position = UDim2.new(0.5, -190, 0.3, -135)
-mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
-mainFrame.Parent = screenGui
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0,12)
 
-local header = Instance.new("TextLabel")
-header.Size = UDim2.new(1, 0, 0, 30)
-header.BackgroundTransparency = 1
-header.Text = "Auto Summit - Hell Expedition   |   yars ganteng"
-header.Font = Enum.Font.SourceSansBold
-header.TextSize = 16
-header.TextColor3 = Color3.fromRGB(255, 200, 200)
-header.Parent = mainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,0,25)
+Title.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Title.Text = "Auto Summit - yars ganteng"
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 14
+Title.Parent = MainFrame
 
--- Body
-local body = Instance.new("Frame")
-body.Size = UDim2.new(1, -10, 1, -40)
-body.Position = UDim2.new(0, 5, 0, 35)
-body.BackgroundTransparency = 1
-body.Parent = mainFrame
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0,25,0,25)
+closeBtn.Position = UDim2.new(1,-25,0,0)
+closeBtn.Text = "X"
+closeBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.Parent = Title
 
--- Buttons
-local teleportBtn = Instance.new("TextButton")
-teleportBtn.Size = UDim2.new(0.48, 0, 0, 36)
-teleportBtn.Text = "Teleport"
-teleportBtn.Font = Enum.Font.SourceSansBold
-teleportBtn.TextSize = 16
-teleportBtn.BackgroundColor3 = Color3.fromRGB(170, 255, 180)
-teleportBtn.Parent = body
-Instance.new("UICorner", teleportBtn).CornerRadius = UDim.new(0, 8)
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0,25,0,25)
+minimizeBtn.Position = UDim2.new(1,-50,0,0)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+minimizeBtn.TextColor3 = Color3.new(1,1,1)
+minimizeBtn.Parent = Title
 
-local autoBtn = teleportBtn:Clone()
-autoBtn.Text = "Auto: OFF"
-autoBtn.Position = UDim2.new(0.52, 0, 0, 0)
-autoBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 95)
-autoBtn.Parent = body
+-- Status Label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1,0,0,25)
+statusLabel.Position = UDim2.new(0,0,0,30)
+statusLabel.Text = "Status: OFF"
+statusLabel.TextColor3 = Color3.new(1,1,1)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.SourceSansBold
+statusLabel.TextSize = 14
+statusLabel.Parent = MainFrame
 
-local stopBtn = teleportBtn:Clone()
-stopBtn.Text = "Stop"
-stopBtn.Position = UDim2.new(0, 0, 0, 42)
-stopBtn.Size = UDim2.new(1, 0, 0, 36)
-stopBtn.BackgroundColor3 = Color3.fromRGB(220, 90, 90)
-stopBtn.Parent = body
-
--- Delay controls
+-- Delay Control
+local delayTime = 1
 local delayLabel = Instance.new("TextLabel")
-delayLabel.Size = UDim2.new(0.6, 0, 0, 20)
-delayLabel.Position = UDim2.new(0, 0, 0, 84)
+delayLabel.Size = UDim2.new(1,0,0,25)
+delayLabel.Position = UDim2.new(0,0,0,60)
+delayLabel.Text = "Delay: "..delayTime.."s"
+delayLabel.TextColor3 = Color3.new(1,1,1)
 delayLabel.BackgroundTransparency = 1
-delayLabel.Text = "Delay: "..delaySeconds.."s"
 delayLabel.Font = Enum.Font.SourceSans
 delayLabel.TextSize = 14
-delayLabel.TextColor3 = Color3.fromRGB(230,230,230)
-delayLabel.Parent = body
+delayLabel.Parent = MainFrame
 
-local minusBtn = teleportBtn:Clone()
-minusBtn.Size = UDim2.new(0, 36, 0, 24)
+local minusBtn = Instance.new("TextButton")
+minusBtn.Size = UDim2.new(0,40,0,25)
+minusBtn.Position = UDim2.new(0,20,0,90)
 minusBtn.Text = "-"
-minusBtn.Position = UDim2.new(0.65, 0, 0, 82)
-minusBtn.Parent = body
+minusBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+minusBtn.TextColor3 = Color3.new(1,1,1)
+minusBtn.Parent = MainFrame
 
-local plusBtn = teleportBtn:Clone()
-plusBtn.Size = UDim2.new(0, 36, 0, 24)
+local plusBtn = Instance.new("TextButton")
+plusBtn.Size = UDim2.new(0,40,0,25)
+plusBtn.Position = UDim2.new(0,70,0,90)
 plusBtn.Text = "+"
-plusBtn.Position = UDim2.new(0.65, 40, 0, 82)
-plusBtn.Parent = body
+plusBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+plusBtn.TextColor3 = Color3.new(1,1,1)
+plusBtn.Parent = MainFrame
 
--- Input CFrame
-local inputLabel = delayLabel:Clone()
-inputLabel.Text = "Summit CFrame:"
-inputLabel.Position = UDim2.new(0, 0, 0, 112)
-inputLabel.Parent = body
+-- Teleport Btn
+local tpBtn = Instance.new("TextButton")
+tpBtn.Size = UDim2.new(0,180,0,25)
+tpBtn.Position = UDim2.new(0,20,0,120)
+tpBtn.Text = "Teleport to Summit"
+tpBtn.BackgroundColor3 = Color3.fromRGB(50,150,50)
+tpBtn.TextColor3 = Color3.new(1,1,1)
+tpBtn.Parent = MainFrame
 
-local cframeBox = Instance.new("TextBox")
-cframeBox.Size = UDim2.new(1, -4, 0, 28)
-cframeBox.Position = UDim2.new(0, 0, 0, 134)
-cframeBox.PlaceholderText = "Masukkan CFrame manual"
-cframeBox.Text = ""
-cframeBox.Font = Enum.Font.SourceSans
-cframeBox.TextSize = 14
-cframeBox.TextColor3 = Color3.fromRGB(0,0,0)
-cframeBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-cframeBox.ClearTextOnFocus = false
-cframeBox.Parent = body
-Instance.new("UICorner", cframeBox).CornerRadius = UDim.new(0, 6)
+-- Auto Summit Loop
+local autoSummit = false
 
--- Minimize & Close
-local minimizeBtn = teleportBtn:Clone()
-minimizeBtn.Text = "_"
-minimizeBtn.Size = UDim2.new(0, 40, 0, 24)
-minimizeBtn.Position = UDim2.new(0, 0, 1, -28)
-minimizeBtn.Parent = mainFrame
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0,100,0,25)
+toggleBtn.Position = UDim2.new(0,110,0,90)
+toggleBtn.Text = "Start"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(50,100,200)
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Parent = MainFrame
 
-local closeBtn = teleportBtn:Clone()
-closeBtn.Text = "X"
-closeBtn.Size = UDim2.new(0, 40, 0, 24)
-closeBtn.Position = UDim2.new(1, -44, 1, -28)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-closeBtn.Parent = mainFrame
-
--- Toast notification
-local function showToast(msg)
-    local toast = Instance.new("TextLabel")
-    toast.Size = UDim2.new(0, 200, 0, 30)
-    toast.Position = UDim2.new(0.5, -100, 0.05, 0)
-    toast.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    toast.TextColor3 = Color3.fromRGB(255,255,255)
-    toast.Text = msg
-    toast.Font = Enum.Font.SourceSansBold
-    toast.TextSize = 14
-    toast.Parent = screenGui
-    Instance.new("UICorner", toast).CornerRadius = UDim.new(0, 6)
-
-    local tween = TweenService:Create(toast, TweenInfo.new(0.5), {BackgroundTransparency=0.2, TextTransparency=0})
-    tween:Play()
-    task.wait(1.5)
-    toast:Destroy()
-end
-
--- === CORE LOGIC ===
-local function getHRP()
-    local char = player.Character or player.CharacterAdded:Wait()
-    return char:FindFirstChild("HumanoidRootPart")
-end
-
-local function teleportSummit()
-    local hrp = getHRP()
-    if hrp then
-        hrp.CFrame = summitCFrame
-        return true
+-- Functions
+tpBtn.MouseButton1Click:Connect(function()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = summitCFrame
     end
-    return false
-end
-
-local function respawnBase()
-    local remote = ReplicatedStorage:FindFirstChild(respawnRemoteName)
-    if remote then
-        remote:FireServer(unpack(respawnArg))
-    end
-end
-
-local function autoLoop()
-    while autoMode do
-        if teleportSummit() then
-            showToast("Teleport → Summit")
-        end
-        task.wait(delaySeconds)
-        respawnBase()
-        showToast("Respawned")
-        player.CharacterAdded:Wait()
-        task.wait(0.5)
-    end
-end
-
--- === BUTTON EVENTS ===
-teleportBtn.MouseButton1Click:Connect(teleportSummit)
-
-autoBtn.MouseButton1Click:Connect(function()
-    autoMode = not autoMode
-    autoBtn.Text = autoMode and "Auto: ON" or "Auto: OFF"
-    if autoMode then
-        task.spawn(autoLoop)
-    end
-end)
-
-stopBtn.MouseButton1Click:Connect(function()
-    autoMode = false
-    autoBtn.Text = "Auto: OFF"
-end)
-
-minusBtn.MouseButton1Click:Connect(function()
-    delaySeconds = math.max(0.1, delaySeconds - 0.1)
-    delayLabel.Text = "Delay: "..string.format("%.1f", delaySeconds).."s"
 end)
 
 plusBtn.MouseButton1Click:Connect(function()
-    delaySeconds = math.min(5, delaySeconds + 0.1)
-    delayLabel.Text = "Delay: "..string.format("%.1f", delaySeconds).."s"
-end)
-
-cframeBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed and cframeBox.Text ~= "" then
-        local ok, cf = pcall(function()
-            return loadstring("return CFrame.new("..cframeBox.Text..")")()
-        end)
-        if ok and typeof(cf) == "CFrame" then
-            summitCFrame = cf
-            showToast("CFrame updated")
-        else
-            showToast("Invalid CFrame!")
-        end
+    if delayTime < 5 then
+        delayTime = delayTime + 0.1
+        delayLabel.Text = string.format("Delay: %.1fs", delayTime)
     end
 end)
 
+minusBtn.MouseButton1Click:Connect(function()
+    if delayTime > 0.1 then
+        delayTime = delayTime - 0.1
+        delayLabel.Text = string.format("Delay: %.1fs", delayTime)
+    end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    autoSummit = not autoSummit
+    if autoSummit then
+        toggleBtn.Text = "Stop"
+        statusLabel.Text = "Status: ON"
+        spawn(function()
+            while autoSummit do
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = summitCFrame
+                end
+                task.wait(0.2)
+                doRespawn()
+                task.wait(delayTime)
+            end
+        end)
+    else
+        toggleBtn.Text = "Start"
+        statusLabel.Text = "Status: OFF"
+    end
+end)
+
+-- Minimize
+local minimized = false
 minimizeBtn.MouseButton1Click:Connect(function()
-    body.Visible = not body.Visible
+    minimized = not minimized
+    for _,child in ipairs(MainFrame:GetChildren()) do
+        if child ~= Title and child ~= minimizeBtn and child ~= closeBtn then
+            child.Visible = not minimized
+        end
+    end
+    MainFrame.Size = minimized and UDim2.new(0,220,0,25) or UDim2.new(0,220,0,160)
 end)
 
+-- Close
 closeBtn.MouseButton1Click:Connect(function()
-    autoMode = false
-    screenGui:Destroy()
+    ScreenGui:Destroy()
 end)
 
-print("[YARS AUTO SUMMIT] Loaded with all features!  Watermark: yars ganteng")
+-- Drag support untuk Android
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
