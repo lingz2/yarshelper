@@ -1,13 +1,12 @@
--- Auto Summit Terbang Loop (Tween)
--- by yars
+-- Auto Summit Loop (Fly to Summit + Reset)
+-- by yars ganteng
 
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LP = Players.LocalPlayer
-local HRP = LP.Character:WaitForChild("HumanoidRootPart")
 
--- Tujuan (puncak)
+-- Koordinat summit
 local summitCFrame = CFrame.new(
     -3449.98486, 768.397278, -233.195923,
     -0.990029633, 1.972348266e-10, -0.140859351,
@@ -16,11 +15,18 @@ local summitCFrame = CFrame.new(
 )
 
 -- Variabel kontrol
-local duration = 5 -- default durasi terbang (detik)
+local flyDuration = 5 -- lama terbang
+local loopDelay = 3   -- delay antar loop
 local running = false
 local flyingTween
 
--- Fungsi reset checkpoint
+-- Cari HRP terbaru
+local function getHRP()
+    local char = LP.Character or LP.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
+end
+
+-- Reset ke checkpoint
 local function resetSummit()
     local ev = RS:FindFirstChild("ResetToCheckpointEvent")
     if ev and ev.FireServer then
@@ -28,11 +34,12 @@ local function resetSummit()
     end
 end
 
--- Fungsi terbang sekali
+-- Fungsi terbang
 local function flyOnce(callback)
     if flyingTween then flyingTween:Cancel() end
+    local HRP = getHRP()
     local goal = {CFrame = summitCFrame}
-    local info = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local info = TweenInfo.new(flyDuration, Enum.EasingStyle.Linear)
     flyingTween = TweenService:Create(HRP, info, goal)
     flyingTween:Play()
     flyingTween.Completed:Wait()
@@ -45,14 +52,14 @@ local function autoSummitLoop()
     while running do
         flyOnce(function()
             if not running then return end
-            task.wait(1) -- jeda di puncak
+            task.wait(1) -- pause di summit
             resetSummit()
-            task.wait(2) -- jeda setelah reset
+            task.wait(loopDelay) -- jeda antar loop
         end)
     end
 end
 
--- Fungsi stop
+-- Stop loop
 local function stopFlying()
     running = false
     if flyingTween then
@@ -76,17 +83,17 @@ stopBtn.Position = UDim2.new(0, 50, 0, 250)
 stopBtn.Text = "■ Stop"
 stopBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 
-local resetBtn = Instance.new("TextButton", gui)
-resetBtn.Size = UDim2.new(0, 150, 0, 40)
-resetBtn.Position = UDim2.new(0, 50, 0, 300)
-resetBtn.Text = "↺ Reset Sekali"
-resetBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+local flyBtn = Instance.new("TextButton", gui)
+flyBtn.Size = UDim2.new(0, 150, 0, 40)
+flyBtn.Position = UDim2.new(0, 50, 0, 300)
+flyBtn.Text = "Durasi: " .. flyDuration .. "s"
+flyBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
 
-local speedBtn = Instance.new("TextButton", gui)
-speedBtn.Size = UDim2.new(0, 150, 0, 40)
-speedBtn.Position = UDim2.new(0, 50, 0, 350)
-speedBtn.Text = "Durasi: " .. duration .. "s"
-speedBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
+local delayBtn = Instance.new("TextButton", gui)
+delayBtn.Size = UDim2.new(0, 150, 0, 40)
+delayBtn.Position = UDim2.new(0, 50, 0, 350)
+delayBtn.Text = "Delay: " .. loopDelay .. "s"
+delayBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 200)
 
 -- Aksi tombol
 startBtn.MouseButton1Click:Connect(function()
@@ -96,12 +103,19 @@ startBtn.MouseButton1Click:Connect(function()
 end)
 
 stopBtn.MouseButton1Click:Connect(stopFlying)
-resetBtn.MouseButton1Click:Connect(resetSummit)
 
-speedBtn.MouseButton1Click:Connect(function()
-    duration = duration + 1
-    if duration > 10 then
-        duration = 0.1
+flyBtn.MouseButton1Click:Connect(function()
+    flyDuration = flyDuration + 1
+    if flyDuration > 10 then
+        flyDuration = 0.1
     end
-    speedBtn.Text = "Durasi: " .. duration .. "s"
+    flyBtn.Text = "Durasi: " .. flyDuration .. "s"
+end)
+
+delayBtn.MouseButton1Click:Connect(function()
+    loopDelay = loopDelay + 1
+    if loopDelay > 20 then
+        loopDelay = 1
+    end
+    delayBtn.Text = "Delay: " .. loopDelay .. "s"
 end)
