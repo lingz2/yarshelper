@@ -1,12 +1,13 @@
--- Auto Summit Loop Noclip
+-- Auto Summit Terbang Loop (Tween)
 -- by yars
 
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local LP = Players.LocalPlayer
 local HRP = LP.Character:WaitForChild("HumanoidRootPart")
 
--- Tujuan summit
+-- Tujuan (puncak)
 local summitCFrame = CFrame.new(
     -3449.98486, 768.397278, -233.195923,
     -0.990029633, 1.972348266e-10, -0.140859351,
@@ -15,86 +16,92 @@ local summitCFrame = CFrame.new(
 )
 
 -- Variabel kontrol
+local duration = 5 -- default durasi terbang (detik)
 local running = false
-local delayTime = 1 -- default 1 detik per step (bisa 0.1 - 10)
+local flyingTween
 
--- Fungsi reset
+-- Fungsi reset checkpoint
 local function resetSummit()
-    RS:WaitForChild("ResetToCheckpointEvent"):FireServer()
+    local ev = RS:FindFirstChild("ResetToCheckpointEvent")
+    if ev and ev.FireServer then
+        ev:FireServer()
+    end
 end
 
--- Auto summit loop
-local function autoSummit()
+-- Fungsi terbang sekali
+local function flyOnce(callback)
+    if flyingTween then flyingTween:Cancel() end
+    local goal = {CFrame = summitCFrame}
+    local info = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    flyingTween = TweenService:Create(HRP, info, goal)
+    flyingTween:Play()
+    flyingTween.Completed:Wait()
+    if callback then callback() end
+end
+
+-- Loop auto summit
+local function autoSummitLoop()
     running = true
-    local target = summitCFrame.Position
-
-    -- loop sampai dihentikan
     while running do
-        -- noclip
-        for _, v in pairs(LP.Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = false
-            end
-        end
+        flyOnce(function()
+            if not running then return end
+            task.wait(1) -- jeda di puncak
+            resetSummit()
+            task.wait(2) -- jeda setelah reset
+        end)
+    end
+end
 
-        -- geser ke target
-        local pos = HRP.Position
-        if (pos - target).Magnitude > 5 then
-            local step = (target - pos).Unit * 5
-            HRP.CFrame = CFrame.new(pos + step, target)
-        else
-            HRP.CFrame = summitCFrame
-        end
-
-        task.wait(delayTime)
+-- Fungsi stop
+local function stopFlying()
+    running = false
+    if flyingTween then
+        flyingTween:Cancel()
+        flyingTween = nil
     end
 end
 
 -- GUI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local gui = Instance.new("ScreenGui", game.CoreGui)
 
-local startBtn = Instance.new("TextButton", ScreenGui)
+local startBtn = Instance.new("TextButton", gui)
 startBtn.Size = UDim2.new(0, 150, 0, 40)
 startBtn.Position = UDim2.new(0, 50, 0, 200)
-startBtn.Text = "▶ Start Summit"
+startBtn.Text = "▶ Start Loop"
 startBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 
-local stopBtn = Instance.new("TextButton", ScreenGui)
+local stopBtn = Instance.new("TextButton", gui)
 stopBtn.Size = UDim2.new(0, 150, 0, 40)
 stopBtn.Position = UDim2.new(0, 50, 0, 250)
-stopBtn.Text = "■ Stop Summit"
+stopBtn.Text = "■ Stop"
 stopBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 
-local resetBtn = Instance.new("TextButton", ScreenGui)
+local resetBtn = Instance.new("TextButton", gui)
 resetBtn.Size = UDim2.new(0, 150, 0, 40)
 resetBtn.Position = UDim2.new(0, 50, 0, 300)
-resetBtn.Text = "↺ Reset Summit"
+resetBtn.Text = "↺ Reset Sekali"
 resetBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
 
--- Slider speed
-local slider = Instance.new("TextButton", ScreenGui)
-slider.Size = UDim2.new(0, 150, 0, 40)
-slider.Position = UDim2.new(0, 50, 0, 350)
-slider.Text = "Speed Delay: " .. delayTime .. "s"
-slider.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
+local speedBtn = Instance.new("TextButton", gui)
+speedBtn.Size = UDim2.new(0, 150, 0, 40)
+speedBtn.Position = UDim2.new(0, 50, 0, 350)
+speedBtn.Text = "Durasi: " .. duration .. "s"
+speedBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
 
-slider.MouseButton1Click:Connect(function()
-    delayTime = delayTime + 0.5
-    if delayTime > 10 then
-        delayTime = 0.1
-    end
-    slider.Text = "Speed Delay: " .. delayTime .. "s"
-end)
-
--- Tombol aksi
+-- Aksi tombol
 startBtn.MouseButton1Click:Connect(function()
     if not running then
-        task.spawn(autoSummit)
+        task.spawn(autoSummitLoop)
     end
 end)
 
-stopBtn.MouseButton1Click:Connect(function()
-    running = false
-end)
-
+stopBtn.MouseButton1Click:Connect(stopFlying)
 resetBtn.MouseButton1Click:Connect(resetSummit)
+
+speedBtn.MouseButton1Click:Connect(function()
+    duration = duration + 1
+    if duration > 10 then
+        duration = 0.1
+    end
+    speedBtn.Text = "Durasi: " .. duration .. "s"
+end)
