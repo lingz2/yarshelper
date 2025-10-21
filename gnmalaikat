@@ -1,162 +1,217 @@
--- 🏔️ AUTO SUMMIT GUI FINAL (Yars Version - GPT-5)
--- Versi: Teleport ke Puncak & Basecamp (tanpa remote)
--- GUI tetap setelah respawn
+-- 🏔️ YARS AUTO SUMMIT FINAL (GUI STAY + CUSTOM CFRAME + SLIDER SPEED)
+-- Developer: Yarsterday
+-- Revisi: Teleport Basecamp via CFrame langsung (tanpa Remote)
 
--- ✅ Lokasi default CFrame
-local summitCFrame = CFrame.new(306.720917, 1230.53601, 83.6961441, -0.775216639, 3.220131942e-09, 0.631695449, 1.67592322e-08, 1, 1.546932726e-08, -0.631695449, 2.257880996e-08, -0.775216639)
-local basecampCFrame = CFrame.new(239.613831, -442.460175, -2266.33398, 0.996433914, -0.0830952376, 0.0146519532, -8.51204274e-10, 0.173648402, 0.98480773, -0.0843771175, -0.981295764, 0.173029155)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
 
--- 🔧 Variabel
-local autoSummit = false
-local speed = 1
+-- Variabel utama
+local autoEnabled = false
+local delaySpeed = 0.5 -- default delay 0.5 detik
 
--- 🪄 Fungsi buat GUI
-local function createGUI()
-    -- Hapus GUI lama kalau ada
-    if game.CoreGui:FindFirstChild("AutoSummitGUI") then
-        game.CoreGui:FindFirstChild("AutoSummitGUI"):Destroy()
-    end
+-- CFrame puncak dan basecamp
+local summitCFrame = CFrame.new(
+	306.720917, 1230.53601, 83.6961441,
+	-0.775216639, 3.220131942e-09, 0.631695449,
+	1.67592322e-08, 1, 1.546932726e-08,
+	-0.631695449, 2.257880996e-08, -0.775216639
+)
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "AutoSummitGUI"
-    gui.ResetOnSpawn = false
-    gui.Parent = game.CoreGui
+local basecampCFrame = CFrame.new(
+	239.613831, -442.460175, -2266.33398,
+	0.996433914, -0.0830952376, 0.0146519532,
+	-8.51204274e-10, 0.173648402, 0.98480773,
+	-0.0843771175, -0.981295764, 0.173029155
+)
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 220, 0, 300)
-    frame.Position = UDim2.new(0.05, 0, 0.3, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    frame.BackgroundTransparency = 0.2
-    frame.BorderSizePixel = 0
-    frame.Parent = gui
-
-    local title = Instance.new("TextLabel")
-    title.Text = "🏔️ AUTO SUMMIT"
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Font = Enum.Font.GothamBold
-    title.TextScaled = true
-    title.Parent = frame
-
-    local startBtn = Instance.new("TextButton")
-    startBtn.Text = "▶ Start Auto Summit"
-    startBtn.Size = UDim2.new(1, -20, 0, 30)
-    startBtn.Position = UDim2.new(0, 10, 0, 40)
-    startBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 75)
-    startBtn.TextColor3 = Color3.new(1, 1, 1)
-    startBtn.Font = Enum.Font.Gotham
-    startBtn.TextScaled = true
-    startBtn.Parent = frame
-
-    local stopBtn = Instance.new("TextButton")
-    stopBtn.Text = "⏹ Stop"
-    stopBtn.Size = UDim2.new(1, -20, 0, 30)
-    stopBtn.Position = UDim2.new(0, 10, 0, 80)
-    stopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    stopBtn.TextColor3 = Color3.new(1, 1, 1)
-    stopBtn.Font = Enum.Font.Gotham
-    stopBtn.TextScaled = true
-    stopBtn.Parent = frame
-
-    local teleportSummitBtn = Instance.new("TextButton")
-    teleportSummitBtn.Text = "⛰️ Ke Puncak"
-    teleportSummitBtn.Size = UDim2.new(1, -20, 0, 30)
-    teleportSummitBtn.Position = UDim2.new(0, 10, 0, 120)
-    teleportSummitBtn.BackgroundColor3 = Color3.fromRGB(80, 140, 255)
-    teleportSummitBtn.TextColor3 = Color3.new(1, 1, 1)
-    teleportSummitBtn.Font = Enum.Font.Gotham
-    teleportSummitBtn.TextScaled = true
-    teleportSummitBtn.Parent = frame
-
-    local teleportBaseBtn = Instance.new("TextButton")
-    teleportBaseBtn.Text = "🏕️ Ke Basecamp"
-    teleportBaseBtn.Size = UDim2.new(1, -20, 0, 30)
-    teleportBaseBtn.Position = UDim2.new(0, 10, 0, 160)
-    teleportBaseBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
-    teleportBaseBtn.TextColor3 = Color3.new(1, 1, 1)
-    teleportBaseBtn.Font = Enum.Font.Gotham
-    teleportBaseBtn.TextScaled = true
-    teleportBaseBtn.Parent = frame
-
-    local speedBox = Instance.new("TextBox")
-    speedBox.PlaceholderText = "Kecepatan (0.1 - 5)"
-    speedBox.Size = UDim2.new(1, -20, 0, 30)
-    speedBox.Position = UDim2.new(0, 10, 0, 200)
-    speedBox.Text = tostring(speed)
-    speedBox.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    speedBox.TextColor3 = Color3.new(1, 1, 1)
-    speedBox.Font = Enum.Font.Gotham
-    speedBox.TextScaled = true
-    speedBox.Parent = frame
-
-    local cframeBox = Instance.new("TextBox")
-    cframeBox.PlaceholderText = "Masukkan CFrame puncak baru..."
-    cframeBox.Size = UDim2.new(1, -20, 0, 30)
-    cframeBox.Position = UDim2.new(0, 10, 0, 240)
-    cframeBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    cframeBox.TextColor3 = Color3.new(1, 1, 1)
-    cframeBox.Font = Enum.Font.Gotham
-    cframeBox.TextScaled = true
-    cframeBox.Parent = frame
-
-    -- 🌀 Fungsi tombol
-    startBtn.MouseButton1Click:Connect(function()
-        autoSummit = true
-        while autoSummit do
-            local char = game.Players.LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = summitCFrame
-            end
-            task.wait(speed)
-        end
-    end)
-
-    stopBtn.MouseButton1Click:Connect(function()
-        autoSummit = false
-    end)
-
-    teleportSummitBtn.MouseButton1Click:Connect(function()
-        local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = summitCFrame
-        end
-    end)
-
-    teleportBaseBtn.MouseButton1Click:Connect(function()
-        local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = basecampCFrame
-        end
-    end)
-
-    speedBox.FocusLost:Connect(function()
-        local val = tonumber(speedBox.Text)
-        if val and val >= 0.1 and val <= 5 then
-            speed = val
-        else
-            speedBox.Text = tostring(speed)
-        end
-    end)
-
-    cframeBox.FocusLost:Connect(function()
-        local success, newCFrame = pcall(function()
-            return loadstring("return CFrame.new(" .. cframeBox.Text .. ")")()
-        end)
-        if success and typeof(newCFrame) == "CFrame" then
-            summitCFrame = newCFrame
-            cframeBox.Text = "✅ CFrame diperbarui!"
-            task.delay(1.5, function() cframeBox.Text = "" end)
-        else
-            cframeBox.Text = "❌ Format salah!"
-            task.delay(1.5, function() cframeBox.Text = "" end)
-        end
-    end)
+-- 🔔 Notifikasi kecil
+local function notify(title, text)
+	pcall(function()
+		game.StarterGui:SetCore("SendNotification", {
+			Title = title,
+			Text = text,
+			Duration = 3
+		})
+	end)
 end
 
--- 🔁 GUI tetap setelah respawn
-createGUI()
-game.Players.LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(2)
-    createGUI()
+-- 📍 Teleport ke puncak
+local function tpSummit()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = summitCFrame
+	end
+end
+
+-- 🔄 Teleport ke basecamp via CFrame
+local function tpBasecamp()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = basecampCFrame
+	end
+end
+
+-- 🔁 Loop Auto Summit (bolak-balik puncak ↔ basecamp)
+local function autoSummitLoop()
+	task.spawn(function()
+		while autoEnabled do
+			tpSummit()
+			task.wait(delaySpeed)
+			tpBasecamp()
+			task.wait(delaySpeed)
+		end
+	end)
+end
+
+-- 🎨 GUI Builder
+local function createGUI()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "YARSAutoSummit"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 260, 0, 280)
+	frame.Position = UDim2.new(0, 20, 0.3, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+	frame.Parent = gui
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+	-- Judul
+	local title = Instance.new("TextLabel", frame)
+	title.Size = UDim2.new(1, 0, 0, 30)
+	title.BackgroundTransparency = 1
+	title.TextColor3 = Color3.new(1, 1, 1)
+	title.Text = "🏔️ YARS Auto Summit"
+	title.Font = Enum.Font.SourceSansBold
+	title.TextSize = 18
+
+	-- GUI dragable
+	local dragging, dragStart, startPos
+	title.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+
+	-- Tombol Auto Summit
+	local autoBtn = Instance.new("TextButton", frame)
+	autoBtn.Size = UDim2.new(1, -20, 0, 30)
+	autoBtn.Position = UDim2.new(0, 10, 0, 40)
+	autoBtn.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+	autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
+	autoBtn.TextSize = 16
+	autoBtn.MouseButton1Click:Connect(function()
+		autoEnabled = not autoEnabled
+		if autoEnabled then
+			autoBtn.Text = "⚡ AUTO SUMMIT: ON"
+			autoBtn.BackgroundColor3 = Color3.fromRGB(255, 120, 120)
+			autoSummitLoop()
+		else
+			autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
+			autoBtn.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+		end
+	end)
+
+	-- Tombol Teleport ke Puncak
+	local tpSummitBtn = Instance.new("TextButton", frame)
+	tpSummitBtn.Size = UDim2.new(1, -20, 0, 30)
+	tpSummitBtn.Position = UDim2.new(0, 10, 0, 80)
+	tpSummitBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 120)
+	tpSummitBtn.Text = "📍 Teleport ke Puncak"
+	tpSummitBtn.MouseButton1Click:Connect(tpSummit)
+
+	-- Tombol Teleport ke Basecamp
+	local tpBaseBtn = Instance.new("TextButton", frame)
+	tpBaseBtn.Size = UDim2.new(1, -20, 0, 30)
+	tpBaseBtn.Position = UDim2.new(0, 10, 0, 120)
+	tpBaseBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 120)
+	tpBaseBtn.Text = "🏕️ Teleport ke Basecamp"
+	tpBaseBtn.MouseButton1Click:Connect(tpBasecamp)
+
+	-- Delay speed slider
+	local delayLabel = Instance.new("TextLabel", frame)
+	delayLabel.Size = UDim2.new(0.6, -20, 0, 30)
+	delayLabel.Position = UDim2.new(0, 10, 0, 160)
+	delayLabel.BackgroundTransparency = 1
+	delayLabel.TextColor3 = Color3.new(1, 1, 1)
+	delayLabel.Text = string.format("Delay: %.1fs", delaySpeed)
+
+	local plusBtn = Instance.new("TextButton", frame)
+	plusBtn.Size = UDim2.new(0.2, -5, 0, 30)
+	plusBtn.Position = UDim2.new(0.6, 0, 0, 160)
+	plusBtn.BackgroundColor3 = Color3.fromRGB(100, 180, 100)
+	plusBtn.Text = "+"
+
+	local minusBtn = Instance.new("TextButton", frame)
+	minusBtn.Size = UDim2.new(0.2, -5, 0, 30)
+	minusBtn.Position = UDim2.new(0.8, 0, 0, 160)
+	minusBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 100)
+	minusBtn.Text = "-"
+
+	plusBtn.MouseButton1Click:Connect(function()
+		delaySpeed = math.clamp(delaySpeed + 0.1, 0.1, 5)
+		delayLabel.Text = string.format("Delay: %.1fs", delaySpeed)
+	end)
+	minusBtn.MouseButton1Click:Connect(function()
+		delaySpeed = math.clamp(delaySpeed - 0.1, 0.1, 5)
+		delayLabel.Text = string.format("Delay: %.1fs", delaySpeed)
+	end)
+
+	-- TextBox ubah CFrame puncak
+	local cfLabel = Instance.new("TextLabel", frame)
+	cfLabel.Size = UDim2.new(1, -20, 0, 30)
+	cfLabel.Position = UDim2.new(0, 10, 0, 200)
+	cfLabel.BackgroundTransparency = 1
+	cfLabel.TextColor3 = Color3.new(1, 1, 1)
+	cfLabel.Text = "Atur CFrame Puncak (x,y,z):"
+
+	local cfBox = Instance.new("TextBox", frame)
+	cfBox.Size = UDim2.new(1, -20, 0, 30)
+	cfBox.Position = UDim2.new(0, 10, 0, 230)
+	cfBox.BackgroundColor3 = Color3.fromRGB(70, 80, 120)
+	cfBox.TextColor3 = Color3.new(1, 1, 1)
+	cfBox.PlaceholderText = "Contoh: 310,1233,88"
+	cfBox.ClearTextOnFocus = false
+
+	cfBox.FocusLost:Connect(function(enter)
+		if enter then
+			local nums = {}
+			for num in string.gmatch(cfBox.Text, "[-]?%d+%.?%d*") do
+				table.insert(nums, tonumber(num))
+			end
+			if #nums == 3 then
+				summitCFrame = CFrame.new(nums[1], nums[2], nums[3])
+				notify("CFrame Updated", table.concat(nums, ", "))
+			else
+				notify("Format salah", "Gunakan format: x,y,z")
+			end
+		end
+	end)
+
+	return gui
+end
+
+-- Buat GUI pertama kali
+local gui = createGUI()
+
+-- Pastikan GUI tetap saat respawn
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	if not player.PlayerGui:FindFirstChild("YARSAutoSummit") then
+		createGUI()
+	end
 end)
