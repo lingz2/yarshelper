@@ -1,6 +1,5 @@
--- YARS NEW MAP SUMMIT AUTO
--- Auto teleport ke puncak
--- GUI drag, speed delay 0.1-5s
+-- YARS NEW MAP SUMMIT AUTO v3
+-- Auto teleport ke puncak, GUI stay, tombol manual ke puncak
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,61 +11,39 @@ local TeleportConfirm = ReplicatedStorage:WaitForChild("TeleportConfirm")
 local autoEnabled = false
 local retryDelay = 0.5 -- default kecepatan auto (0.1-5s)
 
--- posisi puncak
+-- posisi puncak default
 local summitCFrame = CFrame.new(
-    310.338928, 1233.93591, 88.9713364,
-    -0.95353961, 6.928829786e-08, -0.301267624,
-    3.28895275e-08, 1, 1.258908366e-07,
-    0.301267624, 1.10133342e-07, -0.95353961
+    306.720917, 1230.53601, 83.6961441,
+    -0.775216639, 3.220131942e-09, 0.631695449,
+    1.67592322e-08, 1, 1.546932726e-08,
+    -0.631695449, 2.257880996e-08, -0.775216639
 )
 
-local function notify(title, text)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title, Text = text, Duration = 3
-        })
-    end)
+-- GUI tetap walau karakter mati
+if not player:FindFirstChild("PlayerGui") then
+    repeat task.wait() until player:FindFirstChild("PlayerGui")
 end
 
--- teleport ke puncak
-local function tpToSummit()
-    local char = player.Character
-    if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
-    local root = char.HumanoidRootPart
-    root.CFrame = summitCFrame
-    notify("Teleport", "Summit ✅")
-end
-
--- reset/basecamp
-local function resetBasecamp()
-    pcall(function() TeleportConfirm:FireServer() end)
-    notify("Reset", "Back to Basecamp ✅")
-end
-
--- loop auto summit
-local function autoLoop()
-    task.spawn(function()
-        while autoEnabled do
-            tpToSummit()
-            task.wait(retryDelay)
-            resetBasecamp()
-            task.wait(retryDelay)
-        end
-    end)
-end
-
--- GUI
-local gui = Instance.new("ScreenGui")
+local gui = player.PlayerGui:FindFirstChild("YARSNewMap") or Instance.new("ScreenGui")
 gui.Name = "YARSNewMap"
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,260,0,180)
+if not gui:IsDescendantOf(player.PlayerGui) then
+    gui.Parent = player.PlayerGui
+end
+
+local frame = gui:FindFirstChild("MainFrame") or Instance.new("Frame")
+frame.Name = "MainFrame"
+frame.Size = UDim2.new(0,260,0,280)
 frame.Position = UDim2.new(0,20,0.3,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,50)
-Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
+frame.Parent = gui
+if not frame:FindFirstChildOfClass("UICorner") then
+    Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
+end
 
-local title = Instance.new("TextLabel", frame)
+local title = frame:FindFirstChild("Title") or Instance.new("TextLabel", frame)
+title.Name = "Title"
 title.Size = UDim2.new(1,0,0,30)
 title.Text = "YARS New Map Summit"
 title.TextColor3 = Color3.new(1,1,1)
@@ -94,8 +71,34 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- Fungsi teleport ke puncak
+local function tpToSummit()
+    local char = player.Character
+    if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
+    char.HumanoidRootPart.CFrame = summitCFrame
+end
+
+-- reset/basecamp
+local function resetBasecamp()
+    pcall(function() TeleportConfirm:FireServer() end)
+    task.wait(0.1)
+end
+
+-- loop auto summit
+local function autoLoop()
+    task.spawn(function()
+        while autoEnabled do
+            tpToSummit()
+            task.wait(retryDelay)
+            resetBasecamp()
+            task.wait(retryDelay)
+        end
+    end)
+end
+
 -- Tombol auto summit
-local autoBtn = Instance.new("TextButton", frame)
+local autoBtn = frame:FindFirstChild("AutoBtn") or Instance.new("TextButton", frame)
+autoBtn.Name = "AutoBtn"
 autoBtn.Size = UDim2.new(1,-20,0,30)
 autoBtn.Position = UDim2.new(0,10,0,40)
 autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
@@ -113,30 +116,43 @@ autoBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Tombol reset/basecamp manual
-local resetBtn = Instance.new("TextButton", frame)
+local resetBtn = frame:FindFirstChild("ResetBtn") or Instance.new("TextButton", frame)
+resetBtn.Name = "ResetBtn"
 resetBtn.Size = UDim2.new(1,-20,0,30)
 resetBtn.Position = UDim2.new(0,10,0,80)
 resetBtn.BackgroundColor3 = Color3.fromRGB(255,200,150)
 resetBtn.Text = "🔄 Reset Basecamp"
 resetBtn.MouseButton1Click:Connect(resetBasecamp)
 
+-- Tombol manual ke puncak
+local summitBtn = frame:FindFirstChild("SummitBtn") or Instance.new("TextButton", frame)
+summitBtn.Name = "SummitBtn"
+summitBtn.Size = UDim2.new(1,-20,0,30)
+summitBtn.Position = UDim2.new(0,10,0,120)
+summitBtn.BackgroundColor3 = Color3.fromRGB(200,100,100)
+summitBtn.Text = "📍 Teleport to Summit"
+summitBtn.MouseButton1Click:Connect(tpToSummit)
+
 -- Speed delay slider
-local speedLabel = Instance.new("TextLabel", frame)
+local speedLabel = frame:FindFirstChild("SpeedLabel") or Instance.new("TextLabel", frame)
+speedLabel.Name = "SpeedLabel"
 speedLabel.Size = UDim2.new(0.6,-20,0,30)
-speedLabel.Position = UDim2.new(0,10,0,120)
+speedLabel.Position = UDim2.new(0,10,0,160)
 speedLabel.BackgroundTransparency = 1
 speedLabel.TextColor3 = Color3.new(1,1,1)
 speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
 
-local plusBtn = Instance.new("TextButton", frame)
+local plusBtn = frame:FindFirstChild("PlusBtn") or Instance.new("TextButton", frame)
+plusBtn.Name = "PlusBtn"
 plusBtn.Size = UDim2.new(0.2,-5,0,30)
-plusBtn.Position = UDim2.new(0.6,0,0,120)
+plusBtn.Position = UDim2.new(0.6,0,0,160)
 plusBtn.BackgroundColor3 = Color3.fromRGB(100,180,100)
 plusBtn.Text = "+"
 
-local minusBtn = Instance.new("TextButton", frame)
+local minusBtn = frame:FindFirstChild("MinusBtn") or Instance.new("TextButton", frame)
+minusBtn.Name = "MinusBtn"
 minusBtn.Size = UDim2.new(0.2,-5,0,30)
-minusBtn.Position = UDim2.new(0.8,0,0,120)
+minusBtn.Position = UDim2.new(0.8,0,0,160)
 minusBtn.BackgroundColor3 = Color3.fromRGB(180,100,100)
 minusBtn.Text = "-"
 
@@ -147,6 +163,40 @@ end)
 minusBtn.MouseButton1Click:Connect(function()
     retryDelay = math.clamp(retryDelay - 0.1,0.1,5)
     speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
+end)
+
+-- TextBox untuk update CFrame puncak manual
+local cfLabel = frame:FindFirstChild("CFLabel") or Instance.new("TextLabel", frame)
+cfLabel.Name = "CFLabel"
+cfLabel.Size = UDim2.new(1,-20,0,30)
+cfLabel.Position = UDim2.new(0,10,0,200)
+cfLabel.BackgroundTransparency = 1
+cfLabel.TextColor3 = Color3.new(1,1,1)
+cfLabel.Text = "Set Summit CFrame: x,y,z"
+
+local cfBox = frame:FindFirstChild("CFBox") or Instance.new("TextBox", frame)
+cfBox.Name = "CFBox"
+cfBox.Size = UDim2.new(1,-20,0,30)
+cfBox.Position = UDim2.new(0,10,0,230)
+cfBox.BackgroundColor3 = Color3.fromRGB(80,80,120)
+cfBox.TextColor3 = Color3.new(1,1,1)
+cfBox.PlaceholderText = "Ex: 310,1233,88"
+cfBox.ClearTextOnFocus = false
+
+cfBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local input = cfBox.Text
+        local nums = {}
+        for num in string.gmatch(input, "[-]?%d+%.?%d*") do
+            table.insert(nums, tonumber(num))
+        end
+        if #nums == 3 then
+            summitCFrame = CFrame.new(nums[1],nums[2],nums[3])
+            notify("Summit CFrame","Updated to "..table.concat(nums,","))
+        else
+            notify("Error","Format harus: x,y,z")
+        end
+    end
 end)
 
 notify("YARS New Map","Auto Summit Loaded ✅")
