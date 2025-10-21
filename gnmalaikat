@@ -1,12 +1,13 @@
--- Auto Summit GUI dengan kontrol penuh
+-- Auto Summit GUI Compact dengan Speed Slider & Fall Damage Off
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
+-- Remote teleport
 local teleportRemote = ReplicatedStorage:WaitForChild("TeleportConfirm")
 local summitCFrame = CFrame.new(310.338928, 1233.93591, 88.9713364, 
     -0.95353961, 6.928829786e-08, -0.301267624, 
@@ -16,7 +17,7 @@ local summitCFrame = CFrame.new(310.338928, 1233.93591, 88.9713364,
 -- Variabel kontrol
 local autoSummitActive = false
 local autoSummitPaused = false
-local speed = 1 -- default speed 0.1-5
+local speed = 1 -- default speed
 
 -- Fungsi tween
 local function moveTo(targetCFrame, speed)
@@ -28,7 +29,7 @@ local function moveTo(targetCFrame, speed)
     tween.Completed:Wait()
 end
 
--- Fungsi auto summit loop
+-- Loop auto summit
 local function autoSummitLoop()
     while autoSummitActive do
         if autoSummitPaused then
@@ -54,60 +55,49 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Tombol Start
-local StartButton = Instance.new("TextButton")
-StartButton.Size = UDim2.new(0, 150, 0, 50)
-StartButton.Position = UDim2.new(0, 20, 0, 20)
-StartButton.Text = "Start"
-StartButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-StartButton.TextColor3 = Color3.new(1,1,1)
-StartButton.Parent = ScreenGui
+-- Tombol Start/Pause
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 150, 0, 50)
+ToggleButton.Position = UDim2.new(0, 20, 0, 20)
+ToggleButton.Text = "Start Auto Summit"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleButton.TextColor3 = Color3.new(1,1,1)
+ToggleButton.Parent = ScreenGui
 
--- Tombol Pause
-local PauseButton = Instance.new("TextButton")
-PauseButton.Size = UDim2.new(0, 150, 0, 50)
-PauseButton.Position = UDim2.new(0, 20, 0, 80)
-PauseButton.Text = "Pause"
-PauseButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-PauseButton.TextColor3 = Color3.new(1,1,1)
-PauseButton.Parent = ScreenGui
+-- Slider Speed
+local SpeedSlider = Instance.new("TextBox")
+SpeedSlider.Size = UDim2.new(0, 150, 0, 30)
+SpeedSlider.Position = UDim2.new(0, 20, 0, 80)
+SpeedSlider.PlaceholderText = "Speed (0.1-5)"
+SpeedSlider.Text = tostring(speed)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+SpeedSlider.TextColor3 = Color3.new(0,0,0)
+SpeedSlider.Parent = ScreenGui
 
--- Tombol Resume
-local ResumeButton = Instance.new("TextButton")
-ResumeButton.Size = UDim2.new(0, 150, 0, 50)
-ResumeButton.Position = UDim2.new(0, 20, 0, 140)
-ResumeButton.Text = "Resume"
-ResumeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 128)
-ResumeButton.TextColor3 = Color3.new(1,1,1)
-ResumeButton.Parent = ScreenGui
-
--- Tombol Stop
-local StopButton = Instance.new("TextButton")
-StopButton.Size = UDim2.new(0, 150, 0, 50)
-StopButton.Position = UDim2.new(0, 20, 0, 200)
-StopButton.Text = "Stop"
-StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-StopButton.TextColor3 = Color3.new(1,1,1)
-StopButton.Parent = ScreenGui
-
--- Tombol Events
-StartButton.MouseButton1Click:Connect(function()
-    if not autoSummitActive then
-        autoSummitActive = true
-        autoSummitPaused = false
-        spawn(autoSummitLoop)
+SpeedSlider.FocusLost:Connect(function(enter)
+    local val = tonumber(SpeedSlider.Text)
+    if val then
+        speed = math.clamp(val, 0.1, 5)
+    else
+        SpeedSlider.Text = tostring(speed)
     end
 end)
 
-PauseButton.MouseButton1Click:Connect(function()
-    autoSummitPaused = true
+-- Tombol Events
+ToggleButton.MouseButton1Click:Connect(function()
+    autoSummitActive = not autoSummitActive
+    autoSummitPaused = not autoSummitActive
+    if autoSummitActive then
+        ToggleButton.Text = "Pause Auto Summit"
+        spawn(autoSummitLoop)
+    else
+        ToggleButton.Text = "Resume Auto Summit"
+    end
 end)
 
-ResumeButton.MouseButton1Click:Connect(function()
-    autoSummitPaused = false
-end)
-
-StopButton.MouseButton1Click:Connect(function()
-    autoSummitActive = false
-    autoSummitPaused = false
+-- Nonaktifkan Fall Damage
+humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+    if humanoid.Health < humanoid.MaxHealth then
+        humanoid.Health = humanoid.MaxHealth
+    end
 end)
