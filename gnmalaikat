@@ -1,103 +1,152 @@
--- Auto Summit GUI Compact dengan Speed Slider & Fall Damage Off
+-- YARS NEW MAP SUMMIT AUTO
+-- Auto teleport ke puncak
+-- GUI drag, speed delay 0.1-5s
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
 
--- Remote teleport
-local teleportRemote = ReplicatedStorage:WaitForChild("TeleportConfirm")
-local summitCFrame = CFrame.new(310.338928, 1233.93591, 88.9713364, 
-    -0.95353961, 6.928829786e-08, -0.301267624, 
-    3.28895275e-08, 1, 1.258908366e-07, 
-    0.301267624, 1.10133342e-07, -0.95353961)
+local TeleportConfirm = ReplicatedStorage:WaitForChild("TeleportConfirm")
+local autoEnabled = false
+local retryDelay = 0.5 -- default kecepatan auto (0.1-5s)
 
--- Variabel kontrol
-local autoSummitActive = false
-local autoSummitPaused = false
-local speed = 1 -- default speed
+-- posisi puncak
+local summitCFrame = CFrame.new(
+    310.338928, 1233.93591, 88.9713364,
+    -0.95353961, 6.928829786e-08, -0.301267624,
+    3.28895275e-08, 1, 1.258908366e-07,
+    0.301267624, 1.10133342e-07, -0.95353961
+)
 
--- Fungsi tween
-local function moveTo(targetCFrame, speed)
-    speed = math.clamp(speed, 0.1, 5)
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    tween:Play()
-    tween.Completed:Wait()
+local function notify(title, text)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title, Text = text, Duration = 3
+        })
+    end)
 end
 
--- Loop auto summit
-local function autoSummitLoop()
-    while autoSummitActive do
-        if autoSummitPaused then
-            wait(0.1)
-        else
-            -- Teleport/reset ke basecamp
-            teleportRemote:FireServer()
-            wait(0.5)
+-- teleport ke puncak
+local function tpToSummit()
+    local char = player.Character
+    if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
+    local root = char.HumanoidRootPart
+    root.CFrame = summitCFrame
+    notify("Teleport", "Summit ✅")
+end
 
-            -- Pergi ke puncak
-            moveTo(summitCFrame, speed)
-            wait(0.5)
+-- reset/basecamp
+local function resetBasecamp()
+    pcall(function() TeleportConfirm:FireServer() end)
+    notify("Reset", "Back to Basecamp ✅")
+end
 
-            -- Kembali ke basecamp
-            teleportRemote:FireServer()
-            wait(0.5)
+-- loop auto summit
+local function autoLoop()
+    task.spawn(function()
+        while autoEnabled do
+            tpToSummit()
+            task.wait(retryDelay)
+            resetBasecamp()
+            task.wait(retryDelay)
         end
-    end
+    end)
 end
 
 -- GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false
+local gui = Instance.new("ScreenGui")
+gui.Name = "YARSNewMap"
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- Tombol Start/Pause
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 150, 0, 50)
-ToggleButton.Position = UDim2.new(0, 20, 0, 20)
-ToggleButton.Text = "Start Auto Summit"
-ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-ToggleButton.TextColor3 = Color3.new(1,1,1)
-ToggleButton.Parent = ScreenGui
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,260,0,180)
+frame.Position = UDim2.new(0,20,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(40,40,50)
+Instance.new("UICorner",frame).CornerRadius = UDim.new(0,10)
 
--- Slider Speed
-local SpeedSlider = Instance.new("TextBox")
-SpeedSlider.Size = UDim2.new(0, 150, 0, 30)
-SpeedSlider.Position = UDim2.new(0, 20, 0, 80)
-SpeedSlider.PlaceholderText = "Speed (0.1-5)"
-SpeedSlider.Text = tostring(speed)
-SpeedSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-SpeedSlider.TextColor3 = Color3.new(0,0,0)
-SpeedSlider.Parent = ScreenGui
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "YARS New Map Summit"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
 
-SpeedSlider.FocusLost:Connect(function(enter)
-    local val = tonumber(SpeedSlider.Text)
-    if val then
-        speed = math.clamp(val, 0.1, 5)
+-- Drag GUI
+local dragging, dragStart, startPos
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Tombol auto summit
+local autoBtn = Instance.new("TextButton", frame)
+autoBtn.Size = UDim2.new(1,-20,0,30)
+autoBtn.Position = UDim2.new(0,10,0,40)
+autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
+autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
+autoBtn.MouseButton1Click:Connect(function()
+    autoEnabled = not autoEnabled
+    if autoEnabled then
+        autoBtn.Text = "⚡ AUTO SUMMIT: ON"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(255,100,100)
+        autoLoop()
     else
-        SpeedSlider.Text = tostring(speed)
+        autoBtn.Text = "⚡ AUTO SUMMIT: OFF"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(100,255,100)
     end
 end)
 
--- Tombol Events
-ToggleButton.MouseButton1Click:Connect(function()
-    autoSummitActive = not autoSummitActive
-    autoSummitPaused = not autoSummitActive
-    if autoSummitActive then
-        ToggleButton.Text = "Pause Auto Summit"
-        spawn(autoSummitLoop)
-    else
-        ToggleButton.Text = "Resume Auto Summit"
-    end
+-- Tombol reset/basecamp manual
+local resetBtn = Instance.new("TextButton", frame)
+resetBtn.Size = UDim2.new(1,-20,0,30)
+resetBtn.Position = UDim2.new(0,10,0,80)
+resetBtn.BackgroundColor3 = Color3.fromRGB(255,200,150)
+resetBtn.Text = "🔄 Reset Basecamp"
+resetBtn.MouseButton1Click:Connect(resetBasecamp)
+
+-- Speed delay slider
+local speedLabel = Instance.new("TextLabel", frame)
+speedLabel.Size = UDim2.new(0.6,-20,0,30)
+speedLabel.Position = UDim2.new(0,10,0,120)
+speedLabel.BackgroundTransparency = 1
+speedLabel.TextColor3 = Color3.new(1,1,1)
+speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
+
+local plusBtn = Instance.new("TextButton", frame)
+plusBtn.Size = UDim2.new(0.2,-5,0,30)
+plusBtn.Position = UDim2.new(0.6,0,0,120)
+plusBtn.BackgroundColor3 = Color3.fromRGB(100,180,100)
+plusBtn.Text = "+"
+
+local minusBtn = Instance.new("TextButton", frame)
+minusBtn.Size = UDim2.new(0.2,-5,0,30)
+minusBtn.Position = UDim2.new(0.8,0,0,120)
+minusBtn.BackgroundColor3 = Color3.fromRGB(180,100,100)
+minusBtn.Text = "-"
+
+plusBtn.MouseButton1Click:Connect(function()
+    retryDelay = math.clamp(retryDelay + 0.1,0.1,5)
+    speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
+end)
+minusBtn.MouseButton1Click:Connect(function()
+    retryDelay = math.clamp(retryDelay - 0.1,0.1,5)
+    speedLabel.Text = string.format("Speed Delay: %.1fs", retryDelay)
 end)
 
--- Nonaktifkan Fall Damage
-humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-    if humanoid.Health < humanoid.MaxHealth then
-        humanoid.Health = humanoid.MaxHealth
-    end
-end)
+notify("YARS New Map","Auto Summit Loaded ✅")
