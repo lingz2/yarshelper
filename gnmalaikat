@@ -1,0 +1,113 @@
+-- Auto Summit GUI dengan kontrol penuh
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local teleportRemote = ReplicatedStorage:WaitForChild("TeleportConfirm")
+local summitCFrame = CFrame.new(310.338928, 1233.93591, 88.9713364, 
+    -0.95353961, 6.928829786e-08, -0.301267624, 
+    3.28895275e-08, 1, 1.258908366e-07, 
+    0.301267624, 1.10133342e-07, -0.95353961)
+
+-- Variabel kontrol
+local autoSummitActive = false
+local autoSummitPaused = false
+local speed = 1 -- default speed 0.1-5
+
+-- Fungsi tween
+local function moveTo(targetCFrame, speed)
+    speed = math.clamp(speed, 0.1, 5)
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Fungsi auto summit loop
+local function autoSummitLoop()
+    while autoSummitActive do
+        if autoSummitPaused then
+            wait(0.1)
+        else
+            -- Teleport/reset ke basecamp
+            teleportRemote:FireServer()
+            wait(0.5)
+
+            -- Pergi ke puncak
+            moveTo(summitCFrame, speed)
+            wait(0.5)
+
+            -- Kembali ke basecamp
+            teleportRemote:FireServer()
+            wait(0.5)
+        end
+    end
+end
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Tombol Start
+local StartButton = Instance.new("TextButton")
+StartButton.Size = UDim2.new(0, 150, 0, 50)
+StartButton.Position = UDim2.new(0, 20, 0, 20)
+StartButton.Text = "Start"
+StartButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+StartButton.TextColor3 = Color3.new(1,1,1)
+StartButton.Parent = ScreenGui
+
+-- Tombol Pause
+local PauseButton = Instance.new("TextButton")
+PauseButton.Size = UDim2.new(0, 150, 0, 50)
+PauseButton.Position = UDim2.new(0, 20, 0, 80)
+PauseButton.Text = "Pause"
+PauseButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+PauseButton.TextColor3 = Color3.new(1,1,1)
+PauseButton.Parent = ScreenGui
+
+-- Tombol Resume
+local ResumeButton = Instance.new("TextButton")
+ResumeButton.Size = UDim2.new(0, 150, 0, 50)
+ResumeButton.Position = UDim2.new(0, 20, 0, 140)
+ResumeButton.Text = "Resume"
+ResumeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 128)
+ResumeButton.TextColor3 = Color3.new(1,1,1)
+ResumeButton.Parent = ScreenGui
+
+-- Tombol Stop
+local StopButton = Instance.new("TextButton")
+StopButton.Size = UDim2.new(0, 150, 0, 50)
+StopButton.Position = UDim2.new(0, 20, 0, 200)
+StopButton.Text = "Stop"
+StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+StopButton.TextColor3 = Color3.new(1,1,1)
+StopButton.Parent = ScreenGui
+
+-- Tombol Events
+StartButton.MouseButton1Click:Connect(function()
+    if not autoSummitActive then
+        autoSummitActive = true
+        autoSummitPaused = false
+        spawn(autoSummitLoop)
+    end
+end)
+
+PauseButton.MouseButton1Click:Connect(function()
+    autoSummitPaused = true
+end)
+
+ResumeButton.MouseButton1Click:Connect(function()
+    autoSummitPaused = false
+end)
+
+StopButton.MouseButton1Click:Connect(function()
+    autoSummitActive = false
+    autoSummitPaused = false
+end)
